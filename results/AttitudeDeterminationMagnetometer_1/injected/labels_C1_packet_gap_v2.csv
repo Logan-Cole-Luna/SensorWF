@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+C1_packet_gap,185,194,medium,['elapsed_s']

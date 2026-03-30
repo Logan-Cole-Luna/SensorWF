@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+P3_rail_stuck_high,143,356,high,['ADCS_5V_V']

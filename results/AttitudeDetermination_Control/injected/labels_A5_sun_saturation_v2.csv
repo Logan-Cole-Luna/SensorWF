@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+A5_sun_saturation,72,98,medium,"['SUN_SENSOR_1a', 'SUN_SENSOR_1b', 'SUN_SENSOR_2a', 'SUN_SENSOR_2b', 'SUN_SENSOR_3a', 'SUN_SENSOR_3b', 'SUN_SENSOR_4a', 'SUN_SENSOR_4b']"

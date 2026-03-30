@@ -6,6 +6,8 @@ Provides:
   - Rolling-change spike detection
   - Linear trend characterisation
   - Packet timing jitter analysis
+  - ADCS stuck-channel detection
+  - Cross-channel correlation breakdown detection
   - Consolidated run_detection() entry point
 """
 
@@ -87,6 +89,63 @@ def packet_timing(timestamps: pd.Series) -> dict:
     }
 
 
+def adcs_stuck_channels(adcs: pd.DataFrame) -> list[str]:
+    """
+    Return ADCS sensor columns where every non-null value is identical
+    (stuck / frozen sensor) AND the stuck value is not zero.
+
+    Zero-value channels are expected when ADCS is powered off, so they
+    are excluded to avoid false positives in baseline sessions.
+    """
+    live_cols = [
+        c for c in adcs.columns
+        if c not in ("timestamp", "elapsed_s", "ADCS_MODE")
+        and adcs[c].dtype != object
+    ]
+    stuck = []
+    for col in live_cols:
+        valid = adcs[col].dropna()
+        if len(valid) < 3:
+            continue
+        if valid.nunique() == 1 and valid.iloc[0] != 0.0:
+            stuck.append(col)
+    return stuck
+
+
+def correlation_breakdown(
+    df: pd.DataFrame,
+    pairs: list[tuple[str, str]],
+    window: int = 30,
+    threshold: float = 0.5,
+) -> dict:
+    """
+    Detect where a normally correlated channel pair becomes decorrelated.
+
+    For each (col_a, col_b) pair, computes the rolling Pearson correlation
+    over `window` samples.  Returns a dict mapping pair labels to a boolean
+    Series that is True where the rolling correlation drops below `threshold`.
+
+    Parameters
+    ----------
+    df        : DataFrame containing both columns
+    pairs     : list of (col_a, col_b) tuples — pairs expected to correlate
+    window    : rolling window length in samples
+    threshold : minimum acceptable correlation; below this is flagged
+    """
+    results = {}
+    for col_a, col_b in pairs:
+        if col_a not in df.columns or col_b not in df.columns:
+            continue
+        rolling_r = (
+            df[col_a]
+            .rolling(window, min_periods=max(5, window // 3))
+            .corr(df[col_b])
+        )
+        breakdown_mask = rolling_r.abs() < threshold
+        results[f"{col_a}|{col_b}"] = breakdown_mask.fillna(False)
+    return results
+
+
 def run_detection(
     cdh: pd.DataFrame,
     adcs: pd.DataFrame,
@@ -133,6 +192,35 @@ def run_detection(
     report["adcs_all_zero"] = all(
         adcs[c].eq(0).all() for c in imu_cols if c in adcs.columns
     )
+
+    # ── ADCS stuck-channel detection ─────────────────────────────────────────
+    if not adcs.empty:
+        report["adcs_stuck_channels"] = adcs_stuck_channels(adcs)
+    else:
+        report["adcs_stuck_channels"] = []
+
+    # ── Cross-channel correlation breakdown ───────────────────────────────────
+    # Board temperatures that are normally tightly correlated
+    _CORR_PAIRS = [
+        ("TEMP_EPS",     "TEMP_BATTERY"),
+        ("TEMP_EPS",     "TEMP_BACKPLANE"),
+        ("TEMP_COMMS",   "TEMP_PAYLOAD"),
+        ("TEMP_ADCS",    "TEMP_WHEEL"),
+    ]
+    report["correlation_breakdown"] = correlation_breakdown(cdh, _CORR_PAIRS)
+
+    # ── ADCS cross-channel wheel↔gyro correlation (when wheel active) ─────────
+    if (
+        not adcs.empty
+        and "WHEEL_SPEED" in adcs.columns
+        and "GYRO_Z" in adcs.columns
+        and adcs["WHEEL_SPEED"].dropna().abs().max() > 10
+    ):
+        report["wheel_gyro_correlation"] = correlation_breakdown(
+            adcs, [("WHEEL_SPEED", "GYRO_Z")], window=20, threshold=0.3
+        )
+    else:
+        report["wheel_gyro_correlation"] = {}
 
     # ── CDH packet timing ─────────────────────────────────────────────────────
     report["cdh_timing"] = packet_timing(cdh["timestamp"])

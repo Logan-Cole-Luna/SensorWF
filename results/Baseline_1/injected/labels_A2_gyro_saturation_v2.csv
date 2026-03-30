@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+A2_gyro_saturation,138,204,high,['GYRO_X']

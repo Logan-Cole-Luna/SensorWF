@@ -1,0 +1,17 @@
+type,target,variants,detected,detection_rate
+A1_accel_dropout,adcs,2,2,1.0
+A2_gyro_saturation,adcs,2,2,1.0
+A3_mag_flip,adcs,2,2,1.0
+A4_imu_allzero,adcs,2,2,1.0
+A5_sun_saturation,adcs,2,2,1.0
+C1_packet_gap,cdh,2,2,1.0
+COMPOUND_adcs_power_fault,cdh+adcs,2,2,1.0
+COMPOUND_thermal_power_fault,cdh,2,2,1.0
+P1_sysv_sag,cdh,2,2,1.0
+P2_obc_voltage_spike,cdh,2,2,1.0
+P3_rail_stuck_high,cdh,2,2,1.0
+T1_obdh_ramp_accel,cdh,2,2,1.0
+T2_board_step,cdh,2,2,1.0
+T3_board_divergence,cdh,2,1,0.5
+W1_wheel_overspeed,adcs,2,2,1.0
+W2_wheel_sudden_stop,adcs,2,2,1.0

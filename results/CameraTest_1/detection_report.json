@@ -1,0 +1,44 @@
+{
+  "obdh_trend": {
+    "slope_per_min": 1.0606,
+    "intercept": 25.7268,
+    "r_squared": 0.9562,
+    "start": 23.508,
+    "end": 34.169,
+    "delta": 10.661,
+    "_slope_per_s": 0.01767722940301738
+  },
+  "comms_trend": {
+    "slope_per_min": 0.4781,
+    "intercept": 23.4814,
+    "r_squared": 0.962,
+    "start": 23.127,
+    "end": 27.21,
+    "delta": 4.083,
+    "_slope_per_s": 0.007967613127361037
+  },
+  "zscore_counts": {
+    "TEMP_OBDH": 0,
+    "TEMP_COMMS": 0,
+    "TEMP_SOLAR": 0,
+    "SYS_V": 3,
+    "PLAT_5V_V": 0,
+    "OBC_PWR_V": 0,
+    "COMMS_PWR_V": 0
+  },
+  "adcs_rail_mean": 2.8159,
+  "payload_rail_mean": 0.6805,
+  "stuck_sensor_count": 1,
+  "stuck_sensor_names": [
+    "THERMISTOR_HEATER"
+  ],
+  "thermistor_rod_value": 77.180115,
+  "thermistor_bath_value": 74.309649,
+  "adcs_all_zero": false,
+  "adcs_stuck_channels": [],
+  "cdh_timing": {
+    "mean_s": 1.0,
+    "std_s": 0.0,
+    "max_gap_s": 1.0
+  }
+}

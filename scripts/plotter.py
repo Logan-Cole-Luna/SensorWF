@@ -11,7 +11,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy import stats
 
 # ── Shared theme ──────────────────────────────────────────────────────────────
 sns.set_theme(style="darkgrid", palette="muted", font_scale=1.1)
@@ -33,16 +32,70 @@ def _save(fig, output_dir: str, filename: str) -> str:
     return path
 
 
+# ── Shared anomaly overlay helpers ────────────────────────────────────────────
+
+def _flag_zscore(ax, elapsed: pd.Series, series: pd.Series, mask: pd.Series) -> None:
+    """Scatter a crimson X at every sample flagged by the z-score detector."""
+    if mask is None:
+        return
+    idx = mask.reindex(series.index, fill_value=False)
+    n = int(idx.sum())
+    if n == 0:
+        return
+    ax.scatter(elapsed[idx], series[idx],
+               color="crimson", zorder=5, s=55, marker="x", linewidths=1.8,
+               label=f"Z-score flag ({n} pts)")
+
+
+def _shade_breakdown(ax, elapsed: pd.Series, masks_dict: dict) -> None:
+    """Shade contiguous windows where any correlation breakdown mask is True."""
+    if not masks_dict:
+        return
+    combined = None
+    for mask in masks_dict.values():
+        try:
+            vals = mask.values if hasattr(mask, "values") else np.asarray(mask)
+            combined = vals if combined is None else (combined | vals)
+        except Exception:
+            continue
+    if combined is None or not combined.any():
+        return
+    t = elapsed.values
+    labeled = False
+    in_r = False
+    r_start = 0.0
+    for i, flag in enumerate(combined):
+        if flag and not in_r:
+            r_start = t[i]
+            in_r = True
+        elif not flag and in_r:
+            lbl = "Corr. breakdown" if not labeled else "_"
+            ax.axvspan(r_start, t[i], alpha=0.18, color="orange", label=lbl)
+            labeled = True
+            in_r = False
+    if in_r:
+        lbl = "Corr. breakdown" if not labeled else "_"
+        ax.axvspan(r_start, t[-1], alpha=0.18, color="orange", label=lbl)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 01 — Board Temperature Time-Series
 # ─────────────────────────────────────────────────────────────────────────────
-def plot_board_temperatures(cdh: pd.DataFrame, output_dir: str) -> str:
+def plot_board_temperatures(
+    cdh: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
     fig, ax = plt.subplots(figsize=(15, 6))
     for i, col in enumerate(TEMP_COLS):
         if col in cdh.columns:
             ax.plot(cdh["elapsed_s"], cdh[col],
                     label=col.replace("TEMP_", ""), linewidth=1.8,
                     color=PALETTE[i % len(PALETTE)])
+    if report is not None:
+        zm = report.get("zscore_masks", {})
+        for col in TEMP_COLS:
+            if col in cdh.columns and col in zm:
+                _flag_zscore(ax, cdh["elapsed_s"], cdh[col], zm[col])
+        _shade_breakdown(ax, cdh["elapsed_s"], report.get("correlation_breakdown", {}))
     ax.set_xlabel("Elapsed Time (s)")
     ax.set_ylabel("Temperature (°C)")
     ax.set_title("Board Temperatures — Full Session")
@@ -79,12 +132,19 @@ def plot_obdh_ramp(cdh: pd.DataFrame, obdh_trend: dict, output_dir: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # 03 — Power Rail Voltages
 # ─────────────────────────────────────────────────────────────────────────────
-def plot_power_rails(cdh: pd.DataFrame, output_dir: str) -> str:
+def plot_power_rails(
+    cdh: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
     fig, ax = plt.subplots(figsize=WIDE)
     for i, col in enumerate(VOLT_COLS):
         if col in cdh.columns:
             ax.plot(cdh["elapsed_s"], cdh[col],
                     label=col, linewidth=1.8, color=PALETTE[i % len(PALETTE)])
+    if report is not None:
+        zm = report.get("zscore_masks", {})
+        for col in VOLT_COLS:
+            if col in cdh.columns and col in zm:
+                _flag_zscore(ax, cdh["elapsed_s"], cdh[col], zm[col])
     ax.set_xlabel("Elapsed Time (s)")
     ax.set_ylabel("Voltage (V)")
     ax.set_title("Power Rail Voltages — Full Session")
@@ -183,7 +243,6 @@ def plot_summary_dashboard(
     slope     = obdh_trend["_slope_per_s"]
     intercept = obdh_trend["intercept"]
     rate      = obdh_trend["slope_per_min"]
-    r2        = obdh_trend["r_squared"]
     fit_y     = slope * cdh["elapsed_s"] + intercept
 
     rod_cols = [c for c in cdh.columns if c.startswith("THERMISTOR_ROD_")]
@@ -290,7 +349,9 @@ def plot_temperature_distributions(cdh: pd.DataFrame, output_dir: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # 09 — Current Draw per Subsystem (raw ADC counts)
 # ─────────────────────────────────────────────────────────────────────────────
-def plot_current_draw(cdh: pd.DataFrame, output_dir: str) -> str:
+def plot_current_draw(
+    cdh: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
     """
     Plots the raw ADC current counts for each powered rail.
     BATT_CHR_I is shown separately as it is signed (positive = charging).
@@ -328,6 +389,10 @@ def plot_current_draw(cdh: pd.DataFrame, output_dir: str) -> str:
     ax2.set_ylabel("Signed ADC Count")
     ax2.legend(fontsize=9)
 
+    if report is not None:
+        _shade_breakdown(ax,  cdh["elapsed_s"], report.get("correlation_breakdown", {}))
+        _shade_breakdown(ax2, cdh["elapsed_s"], report.get("correlation_breakdown", {}))
+
     plt.tight_layout()
     return _save(fig, output_dir, "09_current_draw.png")
 
@@ -335,12 +400,15 @@ def plot_current_draw(cdh: pd.DataFrame, output_dir: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # 10 — Normalised Temperature Deltas from Baseline (t=0)
 # ─────────────────────────────────────────────────────────────────────────────
-def plot_temperature_deltas(cdh: pd.DataFrame, output_dir: str) -> str:
+def plot_temperature_deltas(
+    cdh: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
     """
     Shows how much each board has drifted from its own t=0 value,
     making the OBDH ramp visually dominant even if absolute values differ.
     """
     cols = [c for c in TEMP_COLS if c in cdh.columns]
+    zm   = report.get("zscore_masks", {}) if report is not None else {}
 
     fig, ax = plt.subplots(figsize=WIDE)
     for i, col in enumerate(cols):
@@ -349,6 +417,9 @@ def plot_temperature_deltas(cdh: pd.DataFrame, output_dir: str) -> str:
         ax.plot(cdh["elapsed_s"], delta,
                 label=col.replace("TEMP_", ""), linewidth=1.8,
                 color=PALETTE[i % len(PALETTE)])
+        if col in zm:
+            delta_flagged = delta.copy()
+            _flag_zscore(ax, cdh["elapsed_s"], delta_flagged, zm[col])
 
     ax.axhline(0, color="black", linestyle="--", linewidth=0.9, alpha=0.5)
     ax.set_xlabel("Elapsed Time (s)")
@@ -517,6 +588,191 @@ def plot_temperature_pairplot(cdh: pd.DataFrame, output_dir: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 16 — IMU 3-Axis Sensor Time-Series (Accel / Gyro / Magnetometer)
+# ─────────────────────────────────────────────────────────────────────────────
+def plot_imu_sensors(
+    adcs: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
+    """
+    Three stacked panels — one each for accelerometer, gyroscope, and
+    magnetometer axes. Only called when at least one axis is non-zero.
+    """
+    fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
+
+    stuck   = set(report.get("adcs_stuck_channels", [])) if report else set()
+    allzero = report.get("adcs_all_zero", False) if report else False
+
+    sensor_groups = [
+        ("Accelerometer (g)", ["ACCEL_X", "ACCEL_Y", "ACCEL_Z"], ["X", "Y", "Z"]),
+        ("Gyroscope (°/s)",   ["GYRO_X",  "GYRO_Y",  "GYRO_Z"],  ["X", "Y", "Z"]),
+        ("Magnetometer (µT)", ["MAG_X",   "MAG_Y",   "MAG_Z"],   ["X", "Y", "Z"]),
+    ]
+
+    for ax, (title, cols, labels) in zip(axes, sensor_groups):
+        for i, (col, label) in enumerate(zip(cols, labels)):
+            if col in adcs.columns:
+                ax.plot(adcs["elapsed_s"], adcs[col],
+                        label=label, linewidth=1.6,
+                        color=PALETTE[i % len(PALETTE)])
+                if col in stuck:
+                    ax.axhline(float(adcs[col].iloc[0]), color="crimson",
+                               linestyle=":", linewidth=1.4, alpha=0.7,
+                               label=f"{label} STUCK")
+        if allzero:
+            ax.axvspan(adcs["elapsed_s"].iloc[0], adcs["elapsed_s"].iloc[-1],
+                       alpha=0.10, color="crimson", label="All-zero (D4)")
+        ax.axhline(0, color="black", linestyle="--", linewidth=0.8, alpha=0.4)
+        ax.set_ylabel(title, fontsize=9)
+        ax.legend(ncol=3, fontsize=9, loc="upper right")
+
+    axes[-1].set_xlabel("Elapsed Time (s)")
+    fig.suptitle("ADCS IMU Sensor Axes — Full Session", fontsize=13, fontweight="bold")
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    return _save(fig, output_dir, "16_imu_sensors.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 17 — IMU Vector Magnitudes
+# ─────────────────────────────────────────────────────────────────────────────
+def plot_imu_magnitudes(
+    adcs: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
+    """
+    Euclidean magnitude of each IMU vector over time — highlights overall
+    motion intensity without needing to parse individual axes.
+    """
+    fig, ax = plt.subplots(figsize=WIDE)
+
+    groups = [
+        (["ACCEL_X", "ACCEL_Y", "ACCEL_Z"], "Accel magnitude (g)",    PALETTE[0]),
+        (["GYRO_X",  "GYRO_Y",  "GYRO_Z"],  "Gyro magnitude (°/s)",  PALETTE[1]),
+        (["MAG_X",   "MAG_Y",   "MAG_Z"],   "Mag magnitude (µT)",    PALETTE[2]),
+    ]
+    for cols, label, color in groups:
+        available = [c for c in cols if c in adcs.columns]
+        if len(available) == 3:
+            mag = np.sqrt(sum(adcs[c] ** 2 for c in available))
+            ax.plot(adcs["elapsed_s"], mag, label=label,
+                    linewidth=1.8, color=color)
+
+    if report is not None and report.get("adcs_all_zero", False):
+        ax.axvspan(adcs["elapsed_s"].iloc[0], adcs["elapsed_s"].iloc[-1],
+                   alpha=0.10, color="crimson", label="All-zero (D4)")
+
+    ax.set_xlabel("Elapsed Time (s)")
+    ax.set_ylabel("Magnitude")
+    ax.set_title("IMU Vector Magnitudes — Accelerometer / Gyroscope / Magnetometer")
+    ax.legend(fontsize=9)
+    plt.tight_layout()
+    return _save(fig, output_dir, "17_imu_magnitudes.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 18 — Reaction Wheel Speed
+# ─────────────────────────────────────────────────────────────────────────────
+def plot_wheel_speed(
+    adcs: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
+    """
+    Reaction wheel speed (signed RPM counts) over the session.
+    Negative values indicate reverse spin direction.
+    """
+    fig, ax = plt.subplots(figsize=WIDE)
+    ax.plot(adcs["elapsed_s"], adcs["WHEEL_SPEED"],
+            color=PALETTE[3], linewidth=1.8, label="Wheel Speed")
+    ax.axhline(0, color="black", linestyle="--", linewidth=0.9, alpha=0.5,
+               label="Zero (stationary)")
+    ax.fill_between(adcs["elapsed_s"], adcs["WHEEL_SPEED"], 0,
+                    where=adcs["WHEEL_SPEED"] > 0, alpha=0.15, color=PALETTE[3],
+                    label="Forward spin")
+    ax.fill_between(adcs["elapsed_s"], adcs["WHEEL_SPEED"], 0,
+                    where=adcs["WHEEL_SPEED"] < 0, alpha=0.15, color="crimson",
+                    label="Reverse spin")
+    if report is not None:
+        _shade_breakdown(ax, adcs["elapsed_s"],
+                         report.get("wheel_gyro_correlation", {}))
+    ax.set_xlabel("Elapsed Time (s)")
+    ax.set_ylabel("Wheel Speed (signed counts)")
+    ax.set_title("Reaction Wheel Speed — Full Session")
+    ax.legend(fontsize=9)
+    plt.tight_layout()
+    return _save(fig, output_dir, "18_wheel_speed.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 19 — Sun Sensor Readings and Sun Angle
+# ─────────────────────────────────────────────────────────────────────────────
+def plot_sun_sensors(
+    adcs: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
+    """
+    All eight sun sensor channels (pairs per face) plus the derived sun angle.
+    """
+    sun_cols = [c for c in adcs.columns if c.startswith("SUN_SENSOR_")]
+    stuck    = set(report.get("adcs_stuck_channels", [])) if report else set()
+
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+
+    ax = axes[0]
+    for i, col in enumerate(sun_cols):
+        ax.plot(adcs["elapsed_s"], adcs[col],
+                label=col.replace("SUN_SENSOR_", "Face "),
+                linewidth=1.6, color=PALETTE[i % len(PALETTE)])
+        if col in stuck:
+            ax.axhline(float(adcs[col].iloc[0]), color="crimson",
+                       linestyle=":", linewidth=1.4, alpha=0.8,
+                       label=f"STUCK: {col}")
+    ax.set_ylabel("ADC Count")
+    ax.set_title("Sun Sensor Readings per Face")
+    ax.legend(ncol=4, fontsize=8, loc="upper right")
+
+    ax2 = axes[1]
+    if "SUN_ANGLE" in adcs.columns:
+        ax2.plot(adcs["elapsed_s"], adcs["SUN_ANGLE"],
+                 color=PALETTE[8 % len(PALETTE)], linewidth=1.8, label="Sun Angle")
+        ax2.set_ylabel("Sun Angle (counts)")
+        ax2.set_title("Derived Sun Angle")
+        ax2.legend(fontsize=9)
+
+    axes[-1].set_xlabel("Elapsed Time (s)")
+    fig.suptitle("Sun Sensor Data — Full Session", fontsize=13, fontweight="bold")
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    return _save(fig, output_dir, "19_sun_sensors.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 20 — Magnetorquer Commands (X / Y / Z)
+# ─────────────────────────────────────────────────────────────────────────────
+def plot_magnetorquer(
+    adcs: pd.DataFrame, output_dir: str, report: dict | None = None
+) -> str:
+    """
+    Magnetorquer command values on each axis. Signed — positive and negative
+    values indicate opposite polarity current direction.
+    """
+    cols   = ["MAGNETORQUER_X", "MAGNETORQUER_Y", "MAGNETORQUER_Z"]
+    labels = ["X", "Y", "Z"]
+    stuck  = set(report.get("adcs_stuck_channels", [])) if report else set()
+
+    fig, ax = plt.subplots(figsize=WIDE)
+    for col, label, color in zip(cols, labels, PALETTE):
+        if col in adcs.columns:
+            ax.plot(adcs["elapsed_s"], adcs[col],
+                    label=f"MTQ {label}", linewidth=1.8, color=color)
+            if col in stuck:
+                ax.axhline(float(adcs[col].iloc[0]), color="crimson",
+                           linestyle=":", linewidth=1.4, alpha=0.8,
+                           label=f"MTQ {label} STUCK")
+    ax.axhline(0, color="black", linestyle="--", linewidth=0.9, alpha=0.4)
+    ax.set_xlabel("Elapsed Time (s)")
+    ax.set_ylabel("Command Value (signed counts)")
+    ax.set_title("Magnetorquer Commands — X / Y / Z Axes")
+    ax.legend(fontsize=9)
+    plt.tight_layout()
+    return _save(fig, output_dir, "20_magnetorquer.png")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Convenience: run all plots
 # ─────────────────────────────────────────────────────────────────────────────
 def run_all_plots(
@@ -525,32 +781,79 @@ def run_all_plots(
     report: dict,
     output_dir: str,
 ) -> list[str]:
-    """Run every plot function and return the list of saved file paths."""
+    """Run every plot function and return the list of saved file paths.
+
+    General telemetry plots are saved to output_dir/.
+    Anomaly-detection-specific plots are saved to output_dir/anomaly_detection/.
+    """
+    anom_dir = os.path.join(output_dir, "anomaly_detection")
+    os.makedirs(anom_dir, exist_ok=True)
+
     paths = []
     obdh  = report["obdh_trend"]
     zc    = report["zscore_counts"]
     zm    = report["zscore_masks"]
 
+    # (label, fn, dest)  — dest is either output_dir or anom_dir
     steps = [
-        ("01 Board temperatures",          lambda: plot_board_temperatures(cdh, output_dir)),
-        ("02 OBDH ramp",                   lambda: plot_obdh_ramp(cdh, obdh, output_dir)),
-        ("03 Power rails",                 lambda: plot_power_rails(cdh, output_dir)),
-        ("04 Thermistor anomaly",          lambda: plot_thermistor_anomaly(cdh, output_dir)),
-        ("05 Temperature correlation",     lambda: plot_temperature_correlation(cdh, output_dir)),
-        ("06 Residual rail voltages",      lambda: plot_residual_rails(cdh, output_dir)),
-        ("07 Summary dashboard",           lambda: plot_summary_dashboard(cdh, obdh, zc, output_dir)),
-        ("08 Temperature distributions",  lambda: plot_temperature_distributions(cdh, output_dir)),
-        ("09 Current draw",                lambda: plot_current_draw(cdh, output_dir)),
-        ("10 Temperature deltas",          lambda: plot_temperature_deltas(cdh, output_dir)),
-        ("11 OBDH rolling stats",          lambda: plot_obdh_rolling_stats(cdh, output_dir)),
-        ("12 Packet timing jitter",        lambda: plot_packet_timing(cdh, output_dir)),
-        ("13 Temperature rate-of-change",  lambda: plot_temperature_roc(cdh, output_dir)),
-        ("14 Voltage anomaly overlay",     lambda: plot_voltage_anomaly_overlay(cdh, zm, output_dir)),
-        ("15 Temperature pairplot",        lambda: plot_temperature_pairplot(cdh, output_dir)),
+        ("01 Board temperatures",         lambda: plot_board_temperatures(cdh, output_dir, report),         output_dir),
+        ("02 OBDH ramp",                  lambda: plot_obdh_ramp(cdh, obdh, anom_dir),                      anom_dir),
+        ("03 Power rails",                lambda: plot_power_rails(cdh, output_dir, report),                 output_dir),
+        ("04 Thermistor anomaly",         lambda: plot_thermistor_anomaly(cdh, anom_dir),                    anom_dir),
+        ("05 Temperature correlation",    lambda: plot_temperature_correlation(cdh, anom_dir),               anom_dir),
+        ("06 Residual rail voltages",     lambda: plot_residual_rails(cdh, anom_dir),                        anom_dir),
+        ("07 Summary dashboard",          lambda: plot_summary_dashboard(cdh, obdh, zc, output_dir),         output_dir),
+        ("08 Temperature distributions",  lambda: plot_temperature_distributions(cdh, output_dir),           output_dir),
+        ("09 Current draw",               lambda: plot_current_draw(cdh, output_dir, report),                output_dir),
+        ("10 Temperature deltas",         lambda: plot_temperature_deltas(cdh, output_dir, report),          output_dir),
+        ("11 OBDH rolling stats",         lambda: plot_obdh_rolling_stats(cdh, anom_dir),                    anom_dir),
+        ("12 Packet timing jitter",       lambda: plot_packet_timing(cdh, anom_dir),                         anom_dir),
+        ("13 Temperature rate-of-change", lambda: plot_temperature_roc(cdh, anom_dir),                       anom_dir),
+        ("14 Voltage anomaly overlay",    lambda: plot_voltage_anomaly_overlay(cdh, zm, anom_dir),           anom_dir),
+        ("15 Temperature pairplot",       lambda: plot_temperature_pairplot(cdh, output_dir),                output_dir),
     ]
 
-    for label, fn in steps:
+    for label, fn, _ in steps:
         print(f"  Plotting {label} …")
         paths.append(fn())
+
+    # ── ADCS-specific plots (only when sensors have live data) ────────────────
+    imu_cols = ["ACCEL_X", "ACCEL_Y", "ACCEL_Z", "GYRO_X", "GYRO_Y", "GYRO_Z",
+                "MAG_X", "MAG_Y", "MAG_Z"]
+    has_imu = (
+        not adcs.empty
+        and any(c in adcs.columns for c in imu_cols)
+        and any(adcs[c].abs().max() > 0 for c in imu_cols if c in adcs.columns)
+    )
+    if has_imu:
+        print("  Plotting 16 IMU sensors …")
+        paths.append(plot_imu_sensors(adcs, output_dir, report))
+        print("  Plotting 17 IMU magnitudes …")
+        paths.append(plot_imu_magnitudes(adcs, output_dir, report))
+
+    has_wheel = (
+        not adcs.empty
+        and "WHEEL_SPEED" in adcs.columns
+        and adcs["WHEEL_SPEED"].dropna().abs().max() > 0
+    )
+    if has_wheel:
+        print("  Plotting 18 Wheel speed …")
+        paths.append(plot_wheel_speed(adcs, output_dir, report))
+
+    sun_cols = [c for c in adcs.columns if c.startswith("SUN_SENSOR_")] if not adcs.empty else []
+    has_sun = bool(sun_cols) and any(adcs[c].abs().max() > 0 for c in sun_cols)
+    if has_sun:
+        print("  Plotting 19 Sun sensors …")
+        paths.append(plot_sun_sensors(adcs, output_dir, report))
+
+    mtq_cols = ["MAGNETORQUER_X", "MAGNETORQUER_Y", "MAGNETORQUER_Z"]
+    has_mtq = (
+        not adcs.empty
+        and any(c in adcs.columns for c in mtq_cols)
+        and any(adcs[c].abs().max() > 0 for c in mtq_cols if c in adcs.columns)
+    )
+    if has_mtq:
+        print("  Plotting 20 Magnetorquer …")
+        paths.append(plot_magnetorquer(adcs, output_dir, report))
 
     return paths

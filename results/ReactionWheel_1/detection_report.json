@@ -1,0 +1,64 @@
+{
+  "obdh_trend": {
+    "slope_per_min": 1.557,
+    "intercept": 25.7316,
+    "r_squared": 0.9427,
+    "start": 24.675,
+    "end": 29.915,
+    "delta": 5.239,
+    "_slope_per_s": 0.02594962680273194
+  },
+  "comms_trend": {
+    "slope_per_min": 0.4174,
+    "intercept": 24.3819,
+    "r_squared": 0.9588,
+    "start": 24.145,
+    "end": 25.506,
+    "delta": 1.36,
+    "_slope_per_s": 0.006956066906352311
+  },
+  "zscore_counts": {
+    "TEMP_OBDH": 0,
+    "TEMP_COMMS": 0,
+    "TEMP_SOLAR": 14,
+    "SYS_V": 7,
+    "PLAT_5V_V": 20,
+    "OBC_PWR_V": 14,
+    "COMMS_PWR_V": 23
+  },
+  "adcs_rail_mean": 4.6259,
+  "payload_rail_mean": 0.6817,
+  "stuck_sensor_count": 21,
+  "stuck_sensor_names": [
+    "THERMISTOR_ROD_1",
+    "THERMISTOR_ROD_2",
+    "THERMISTOR_ROD_3",
+    "THERMISTOR_ROD_4",
+    "THERMISTOR_ROD_5",
+    "THERMISTOR_ROD_6",
+    "THERMISTOR_ROD_7",
+    "THERMISTOR_ROD_8",
+    "THERMISTOR_ROD_9",
+    "THERMISTOR_ROD_10",
+    "THERMISTOR_ROD_11",
+    "THERMISTOR_ROD_12",
+    "THERMISTOR_ROD_13",
+    "THERMISTOR_ROD_14",
+    "THERMISTOR_ROD_15",
+    "THERMISTOR_ROD_16",
+    "THERMISTOR_BATH_1",
+    "THERMISTOR_BATH_2",
+    "THERMISTOR_BATH_3",
+    "THERMISTOR_EXP3",
+    "THERMISTOR_HEATER"
+  ],
+  "thermistor_rod_value": 77.180115,
+  "thermistor_bath_value": 74.309649,
+  "adcs_all_zero": false,
+  "adcs_stuck_channels": [],
+  "cdh_timing": {
+    "mean_s": 0.5043,
+    "std_s": 0.1446,
+    "max_gap_s": 1.154
+  }
+}

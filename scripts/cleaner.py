@@ -22,6 +22,26 @@ _HEX_UINT_COLS = [
 # Fields stored as raw signed 16-bit hex (two's complement)
 _HEX_INT16_COLS = ["BATT_CHR_I"]
 
+# ADCS Sensor packet hex fields — unsigned 16-bit
+_ADCS_HEX_UINT_COLS = [
+    "ADCS_MODE",
+    "SUN_SENSOR_1a", "SUN_SENSOR_1b",
+    "SUN_SENSOR_2a", "SUN_SENSOR_2b",
+    "SUN_SENSOR_3a", "SUN_SENSOR_3b",
+    "SUN_SENSOR_4a", "SUN_SENSOR_4b",
+    "SUN_ANGLE",
+    "KP_VALUE", "KD_VALUE",
+    "ADCS_VERSION",
+    "ADCS_ACC_CNT", "ADCS_REJ_CNT", "ADCS_INC_CNT",
+    "MAG_DEPLOYMENT_STATUS",
+]
+
+# ADCS Sensor packet hex fields — signed 16-bit (direction-aware)
+_ADCS_HEX_INT16_COLS = [
+    "WHEEL_SPEED",
+    "MAGNETORQUER_X", "MAGNETORQUER_Y", "MAGNETORQUER_Z",
+]
+
 # (voltage_col, current_col) pairs for power estimation
 _POWER_PAIRS = [
     ("SYS_V",       "SYS_I"),
@@ -39,6 +59,8 @@ def _hex_to_uint(val) -> float:
     """Convert a hex string or numeric to an unsigned integer."""
     if pd.isna(val):
         return np.nan
+    if isinstance(val, (int, float)):
+        return float(val)
     try:
         return float(int(str(val), 16))
     except (ValueError, TypeError):
@@ -49,6 +71,9 @@ def _hex_to_int16(val) -> float:
     """Convert a hex string to a signed 16-bit integer."""
     if pd.isna(val):
         return np.nan
+    if isinstance(val, (int, float)):
+        # Already decoded (e.g. from a mixed-format Debug file)
+        return float(val)
     try:
         n = int(str(val), 16)
         if n >= 0x8000:
@@ -72,13 +97,13 @@ def clean_cdh(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     df = df.dropna(subset=["timestamp"])
     df = df.drop_duplicates(subset="timestamp", keep="last")
 
-    # Hex current fields
+    # Hex current fields — explicit float64 cast guards against ArrowDtype backends
     for col in _HEX_UINT_COLS:
         if col in df.columns:
-            df[col] = df[col].apply(_hex_to_uint) * _CURRENT_SCALE
+            df[col] = np.array([_hex_to_uint(v) for v in df[col]], dtype=float) * _CURRENT_SCALE
     for col in _HEX_INT16_COLS:
         if col in df.columns:
-            df[col] = df[col].apply(_hex_to_int16) * _CURRENT_SCALE
+            df[col] = np.array([_hex_to_int16(v) for v in df[col]], dtype=float) * _CURRENT_SCALE
 
     # Remaining columns → float
     for col in df.columns:
@@ -112,10 +137,21 @@ def clean_adcs(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df = df.dropna(subset=["timestamp"])
     df = df.drop_duplicates(subset="timestamp", keep="last")
+
+    # Decode known hex fields before generic coercion
+    for col in _ADCS_HEX_UINT_COLS:
+        if col in df.columns:
+            df[col] = df[col].apply(_hex_to_uint)
+    for col in _ADCS_HEX_INT16_COLS:
+        if col in df.columns:
+            df[col] = df[col].apply(_hex_to_int16)
+
     for col in df.columns:
         if col == "timestamp":
             continue
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+        if df[col].dtype == object:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
     t0 = df["timestamp"].iloc[0]
     df["elapsed_s"] = (df["timestamp"] - t0).dt.total_seconds()
     return df
