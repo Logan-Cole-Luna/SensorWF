@@ -60,38 +60,36 @@
     }
   },
   "timing": {
-    "cycles_min": 86,
-    "cycles_max": 143,
-    "cycles_mean": 114.02,
-    "inf_us_min": 0.1792,
-    "inf_us_max": 0.2979,
-    "inf_us_mean": 0.2375,
-    "inf_us_std": 0.0176,
+    "cycles_min": 93,
+    "cycles_max": 135,
+    "cycles_mean": 114.44,
+    "inf_us_min": 0.1938,
+    "inf_us_max": 0.2812,
+    "inf_us_mean": 0.2384,
+    "inf_us_std": 0.0154,
     "inf_us_p95": 0.2646,
     "inf_us_p99": 0.2729
   },
   "resource_usage": {
-    "stack_used_bytes_min": 3400,
-    "stack_used_bytes_max": 3400,
-    "stack_budget_bytes": 4096,
-    "stack_headroom_bytes": 696,
-    "heap_free_bytes_min": 200000,
-    "heap_free_bytes_max": 200000,
+    "stack_used_bytes_min": 64,
+    "stack_used_bytes_max": 64,
+    "stack_canary_budget": 1024,
+    "stack_headroom_bytes": 960,
     "flash_bytes_tree": 429,
     "flash_bytes_scaler": 120,
     "flash_bytes_total": 549,
     "ram_bytes_features": 60,
-    "ram_bytes_task_stack": 4096
+    "note": "bare-metal, no heap (no dynamic allocation)"
   },
   "energy": {
     "method": "whole_chip_active_run_current \u00d7 inference_duration",
     "note": "Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.",
-    "whole_chip_energy_per_inf_nj": 94.0698,
+    "whole_chip_energy_per_inf_nj": 94.413,
     "ids_duty_fraction_at_100hz": 2.4e-05,
-    "energy_per_inf_nj_estimate": 0.002235,
-    "energy_per_inf_pj_estimate": 2.2346,
+    "energy_per_inf_nj_estimate": 0.002251,
+    "energy_per_inf_pj_estimate": 2.251,
     "power_overhead_uw_at_100hz": 0.0002
   },
-  "host_stream_time_s": 0.041,
+  "host_stream_time_s": 0.044,
   "firmware_summary_match": true
 }

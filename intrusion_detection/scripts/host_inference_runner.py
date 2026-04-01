@@ -134,25 +134,25 @@ class DryRunLink:
             if self._pending_features is not None:
                 feat_scaled = self._scaler.transform(self._pending_features.reshape(1, -1))[0]
                 pred = int(self._clf.predict(feat_scaled.reshape(1, -1))[0])
-                cycles = int(np.random.normal(115, 8))   # realistic for 480 MHz tree
-                hwm    = 850    # words
-                heap   = 200_000
-                self._results.append((pred, gt, cycles, hwm, heap))
+                cycles      = int(np.random.normal(115, 8))   # realistic for 480 MHz tree
+                stack_bytes = 64    # canary measurement: float[15] + locals
+                self._results.append((pred, gt, cycles, stack_bytes))
                 self._pending_features = None
 
     def recv(self, n: int) -> bytes:
         if n == SAMPLE_SIZE and self._results:
-            pred, gt, cycles, hwm, heap = self._results[-1]
-            return struct.pack(SAMPLE_FMT, pred, gt, cycles, hwm, heap, 0)
+            pred, gt, cycles, stack_bytes = self._results[-1]
+            return struct.pack(SAMPLE_FMT, pred, gt, cycles, stack_bytes, 0, 0)
 
         if n == SUMMARY_SIZE:
             res = self._results
-            tp = sum(1 for p, g, *_ in res if p == 1 and g == 1)
-            tn = sum(1 for p, g, *_ in res if p == 0 and g == 0)
-            fp = sum(1 for p, g, *_ in res if p == 1 and g == 0)
-            fn = sum(1 for p, g, *_ in res if p == 0 and g == 1)
+            tp = sum(1 for p, g, c, s in res if p == 1 and g == 1)
+            tn = sum(1 for p, g, c, s in res if p == 0 and g == 0)
+            fp = sum(1 for p, g, c, s in res if p == 1 and g == 0)
+            fn = sum(1 for p, g, c, s in res if p == 0 and g == 1)
             ns = len(res)
-            cycles_list = [c for _, _, c, *_ in res]
+            cycles_list  = [c for _, _, c, _ in res]
+            stack_max    = max(s for _, _, _, s in res)
             acc  = (tp + tn) / ns if ns else 0
             prec = tp / (tp + fp) if (tp + fp) else 0
             rec  = tp / (tp + fn) if (tp + fn) else 0
@@ -166,7 +166,7 @@ class DryRunLink:
                 ns, tp+tn, tp, tn, fp, fn,
                 min(cycles_list), max(cycles_list),
                 csum >> 32, csum & 0xFFFFFFFF,
-                850,                    # stack hwm min words
+                stack_max,              # stack_used_bytes_max (canary)
                 energy_nj, inf_us,
                 acc, prec, rec, f1, fpr
             )
@@ -226,24 +226,22 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
 
         # Receive per-sample result (16 bytes)
         data = link.recv(SAMPLE_SIZE)
-        pred, gt, cycles, hwm_words, heap_free, _ = struct.unpack(SAMPLE_FMT, data)
+        pred, gt, cycles, stack_used_bytes, _r0, _r1 = struct.unpack(SAMPLE_FMT, data)
 
         inf_us  = cycles / (HCLK_HZ / 1e6)
         raw_rows.append({
-            'sample_idx':    i,
-            'prediction':    pred,
-            'ground_truth':  gt,
-            'cycles':        cycles,
-            'inf_us':        round(inf_us, 4),
-            'stack_hwm_words': hwm_words,
-            'stack_hwm_bytes': hwm_words * 4,
-            'heap_free_bytes': heap_free,
+            'sample_idx':       i,
+            'prediction':       pred,
+            'ground_truth':     gt,
+            'cycles':           cycles,
+            'inf_us':           round(inf_us, 4),
+            'stack_used_bytes': stack_used_bytes,
         })
 
         if (i + 1) % 500 == 0 or (i + 1) == n:
             elapsed = time.perf_counter() - t_stream_start
             print(f"  [{i+1:>5}/{n}] elapsed={elapsed:.1f}s  last_inf={inf_us:.2f}µs  "
-                  f"stack_hwm={hwm_words*4}B  heap_free={heap_free//1024}KB")
+                  f"stack_used={stack_used_bytes}B")
 
     stream_total_s = time.perf_counter() - t_stream_start
 
@@ -294,8 +292,7 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
 
     # Resource measurements
     cycles_arr   = np.array([r['cycles'] for r in raw_rows])
-    stack_arr    = np.array([r['stack_hwm_bytes'] for r in raw_rows])
-    heap_arr     = np.array([r['heap_free_bytes'] for r in raw_rows])
+    stack_arr    = np.array([r['stack_used_bytes'] for r in raw_rows])
     inf_us_arr   = cycles_arr / (HCLK_HZ / 1e6)
 
     # Energy — two estimates:
@@ -350,15 +347,13 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
         'resource_usage': {
             'stack_used_bytes_min':  int(stack_arr.min()),
             'stack_used_bytes_max':  int(stack_arr.max()),
-            'stack_budget_bytes':    1024 * 4,
-            'stack_headroom_bytes':  (1024 * 4) - int(stack_arr.max()),
-            'heap_free_bytes_min':   int(heap_arr.min()),
-            'heap_free_bytes_max':   int(heap_arr.max()),
+            'stack_canary_budget':   1024,
+            'stack_headroom_bytes':  1024 - int(stack_arr.max()),
             'flash_bytes_tree':      tree_flash_bytes,
             'flash_bytes_scaler':    scaler_flash_bytes,
             'flash_bytes_total':     total_flash_bytes,
-            'ram_bytes_features':    len(FEATURE_NAMES) * 4,   # float[15] on stack
-            'ram_bytes_task_stack':  1024 * 4,
+            'ram_bytes_features':    len(FEATURE_NAMES) * 4,
+            'note':                  'bare-metal, no heap (no dynamic allocation)',
         },
         'energy': {
             'method': 'whole_chip_active_run_current × inference_duration',
@@ -449,10 +444,9 @@ def _format_report(r: dict) -> list[str]:
         f"    Scaler params        : {res['flash_bytes_scaler']} bytes",
         f"  RAM    (feature buf)  : {res['ram_bytes_features']} bytes  "
         f"(float[{m['n_features']}] on stack)",
-        f"  RAM    (task stack)   : {res['ram_bytes_task_stack']} bytes",
-        f"  Stack  high-water max : {res['stack_used_bytes_max']} bytes  "
+        f"  Stack  used (canary)  : {res['stack_used_bytes_max']} bytes  "
         f"(headroom: {res['stack_headroom_bytes']} bytes)",
-        f"  Heap   free (min obs) : {res['heap_free_bytes_min']:,} bytes",
+        f"  Heap                  : {res['note']}",
         "",
         "── Energy (IDS model only) ─────────────────────────────────────────",
         f"  Method: {e['method']}",

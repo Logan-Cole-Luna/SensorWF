@@ -23,10 +23,10 @@ Dataset  : 500 CAN frames (satellite subsystems)
   spoofing        1.0000    0.5333       8
 
 ── Timing (on STM32H7) ─────────────────────────────────────────────
-  Cycles   min/mean/max : 86 / 114.0 / 143
-  Time(µs) min/mean/max : 0.1792 / 0.2375 / 0.2979
+  Cycles   min/mean/max : 93 / 114.4 / 135
+  Time(µs) min/mean/max : 0.1938 / 0.2384 / 0.2812
   Time(µs) p95 / p99    : 0.2646 / 0.2729
-  Std dev               : 0.0176 µs
+  Std dev               : 0.0154 µs
   At 100 Hz poll rate   : 0.0024% CPU duty
 
 ── Resource Usage ──────────────────────────────────────────────────
@@ -34,13 +34,12 @@ Dataset  : 500 CAN frames (satellite subsystems)
     Tree arrays          : 429 bytes
     Scaler params        : 120 bytes
   RAM    (feature buf)  : 60 bytes  (float[15] on stack)
-  RAM    (task stack)   : 4096 bytes
-  Stack  high-water max : 3400 bytes  (headroom: 696 bytes)
-  Heap   free (min obs) : 200,000 bytes
+  Stack  used (canary)  : 64 bytes  (headroom: 960 bytes)
+  Heap                  : bare-metal, no heap (no dynamic allocation)
 
 ── Energy (IDS model only) ─────────────────────────────────────────
   Method: whole_chip_active_run_current × inference_duration
-  Whole-chip per-inf    : 94.0698 nJ
+  Whole-chip per-inf    : 94.4130 nJ
   IDS duty @ 100 Hz     : 0.00240%
   IDS power overhead    : 0.0002 µW  (at 100 Hz continuous)
   Note: Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.

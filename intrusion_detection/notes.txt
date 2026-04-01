@@ -7,13 +7,14 @@ firmware/stm32h7_can_ids_benchmark.c
 firmware/stm32h7_can_ids_benchmark.h
 models/trained_models/stm32h7_can_ids_float32.h   ← tree
 models/trained_models/stm32h7_can_ids_scaler.h    ← scaler
-2. Call init from main.c before osKernelStart():
 
+2. Call init from main.c before osKernelStart():
 
 #include "stm32h7_can_ids_benchmark.h"
 // ...
 ids_benchmark_task_init();
 osKernelStart();
+
 3. Wire UART — the benchmark task uses huart3 by default (the debug UART on most Nucleo-H7 boards). Change the IDS_UART define at the top of the .c file if yours differs.
 
 4. Enable DWT in SystemInit() or early in main() (STM32CubeMX doesn't do this by default):
@@ -21,8 +22,8 @@ osKernelStart();
 
 CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-5. Run the benchmark from your host machine:
 
+5. Run the benchmark from your host machine:
 
 # With hardware connected
 python scripts/host_inference_runner.py --port /dev/tty.usbmodem14101
