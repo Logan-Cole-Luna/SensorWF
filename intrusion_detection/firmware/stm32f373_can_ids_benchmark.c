@@ -1,21 +1,30 @@
 /**
- * stm32h7_can_ids_benchmark.c  —  bare-metal, no FreeRTOS
- * =========================================================
- * Measures TinyDecisionTree inference on STM32H7, isolated from all
+ * stm32f373_can_ids_benchmark.c  —  bare-metal, no FreeRTOS
+ * ===========================================================
+ * Measures TinyDecisionTree inference on STM32F373C8T, isolated from all
  * interrupts and board operations during the timing window.
+ *
+ * Target: STM32F373C8T  (Cortex-M4F, 72 MHz, 64 KB Flash, 16 KB RAM)
  *
  * Isolation strategy (bare-metal):
  *   __disable_irq() is called immediately before ids_predict() and
  *   __enable_irq() immediately after. This masks every interrupt —
  *   CAN Rx, SysTick, ADCS, UART DMA — so the DWT cycle count reflects
- *   only the tree traversal, with zero scheduler or ISR noise.
+ *   only the tree traversal, with zero ISR noise.
  *   UART Rx between samples runs with interrupts enabled; only the
- *   ~100-cycle inference window is masked.
+ *   ~50-cycle inference window is masked.
+ *
+ * RAM budget (16 KB total):
+ *   Canary probe  : 256 words = 1 KB  (static, .bss)
+ *   Feature buffer: 15 × float = 60 B (stack, per-sample)
+ *   Log buffer    : 128 B             (stack)
+ *   Remaining for board stack/data: ~14.8 KB
  *
  * What is measured:
- *   - DWT cycle count per inference (1-cycle resolution at 480 MHz)
- *   - Stack depth via canary pattern (no RTOS needed)
+ *   - DWT cycle count per inference (1-cycle resolution at 72 MHz)
+ *   - Stack depth via canary pattern
  *   - Estimated energy per inference from datasheet Idd × Vdd × t
+ *     (STM32F373 datasheet Table 28: 27 mA typ at 72 MHz, 3.3V)
  *   - ML scores: accuracy, recall, precision, F1, FPR
  *
  * Wire protocol (UART 115200 8N1, host drives):
@@ -34,12 +43,12 @@
  *   No osKernelStart() required.
  */
 
-#include "stm32h7_can_ids_benchmark.h"
+#include "stm32f373_can_ids_benchmark.h"
 
 #include "stm32h7_can_ids_float32.h"
 #include "stm32h7_can_ids_scaler.h"
 
-#include "stm32h7xx_hal.h"
+#include "stm32f3xx_hal.h"
 #include "usart.h"
 #include <string.h>
 #include <stdio.h>
@@ -47,17 +56,19 @@
 
 /* ── Configuration ──────────────────────────────────────────────────────────── */
 
-#define IDS_UART             huart3          /* debug UART on Nucleo-H7           */
+#define IDS_UART             huart2          /* STM32F373C8T: USART2 on PA2/PA3  */
 #define IDS_UART_TIMEOUT_MS  5000
 #define IDS_MAX_SAMPLES      8192
 
-#define IDS_HCLK_HZ          480000000UL    /* match your SystemClock_Config()   */
+#define IDS_HCLK_HZ          72000000UL     /* STM32F373 max clock               */
 #define IDS_VDD_MV           3300U
-#define IDS_RUN_CURRENT_UA   120000U         /* STM32H7 datasheet Table 26 ~120mA */
+/* STM32F373 datasheet Table 28: IDD typ = 29.2 mA @ 72 MHz, 3.6V, peripherals
+   off. Derated to 3.3V ≈ 27 mA. Use 27000 µA as conservative estimate.        */
+#define IDS_RUN_CURRENT_UA   27000U
 
-/* Stack canary — fill a local buffer with this sentinel, count survivors */
+/* Stack canary — 256 words = 1 KB out of 16 KB total RAM                       */
 #define CANARY_VALUE         0xDEADBEEFU
-#define CANARY_WORDS         256            /* 1 KB probe region                 */
+#define CANARY_WORDS         256
 
 /* ── DWT ────────────────────────────────────────────────────────────────────── */
 

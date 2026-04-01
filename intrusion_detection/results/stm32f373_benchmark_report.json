@@ -60,15 +60,15 @@
     }
   },
   "timing": {
-    "cycles_min": 89,
-    "cycles_max": 138,
-    "cycles_mean": 114.23,
-    "inf_us_min": 1.2361,
-    "inf_us_max": 1.9167,
-    "inf_us_mean": 1.5865,
-    "inf_us_std": 0.103,
-    "inf_us_p95": 1.75,
-    "inf_us_p99": 1.8335
+    "cycles_min": 90,
+    "cycles_max": 140,
+    "cycles_mean": 113.86,
+    "inf_us_min": 1.25,
+    "inf_us_max": 1.9444,
+    "inf_us_mean": 1.5814,
+    "inf_us_std": 0.1149,
+    "inf_us_p95": 1.7778,
+    "inf_us_p99": 1.8612
   },
   "resource_usage": {
     "stack_used_bytes_min": 64,
@@ -84,10 +84,10 @@
   "energy": {
     "method": "whole_chip_active_run_current \u00d7 inference_duration",
     "note": "Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.",
-    "whole_chip_energy_per_inf_nj": 141.3547,
-    "ids_duty_fraction_at_100hz": 0.000159,
-    "energy_per_inf_nj_estimate": 0.022426,
-    "energy_per_inf_pj_estimate": 22.4255,
+    "whole_chip_energy_per_inf_nj": 140.9067,
+    "ids_duty_fraction_at_100hz": 0.000158,
+    "energy_per_inf_nj_estimate": 0.022284,
+    "energy_per_inf_pj_estimate": 22.2836,
     "power_overhead_uw_at_100hz": 0.0022
   },
   "host_stream_time_s": 0.041,

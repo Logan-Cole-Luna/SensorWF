@@ -1,5 +1,6 @@
 /**
- * stm32h7_can_ids_benchmark.h  —  bare-metal, no FreeRTOS
+ * stm32f373_can_ids_benchmark.h  —  bare-metal, no FreeRTOS
+ * Target: STM32F373C8T  (Cortex-M4F, 72 MHz, 64 KB Flash, 16 KB RAM)
  */
 #pragma once
 
@@ -16,9 +17,9 @@ extern "C" {
  *
  *   int main(void) {
  *       HAL_Init();
- *       SystemClock_Config();
- *       MX_USART3_UART_Init();
- *       ids_benchmark_run();   // never returns
+ *       SystemClock_Config();   // configure PLL to 72 MHz
+ *       MX_USART2_UART_Init();  // USART2 on PA2/PA3
+ *       ids_benchmark_run();    // never returns
  *   }
  */
 void ids_benchmark_run(void);

@@ -2,7 +2,7 @@
 """
 host_inference_runner.py
 ========================
-Drives the STM32H7 IDS benchmark firmware over UART and collects results.
+Drives the STM32F373C8T IDS benchmark firmware over UART and collects results.
 
 Sends the pre-extracted CAN feature test set to the MCU, receives per-sample
 measurements and the final summary, then writes a full report.
@@ -13,9 +13,9 @@ Usage:
     python host_inference_runner.py --dry-run                       # simulates MCU
 
 Outputs:
-    results/stm32h7_benchmark_raw.csv    — per-sample: cycles, stack, heap, pred, gt
-    results/stm32h7_benchmark_report.json — full measurements + ML scores
-    results/stm32h7_benchmark_report.txt  — human-readable summary
+    results/stm32f373_benchmark_raw.csv    — per-sample: cycles, stack, heap, pred, gt
+    results/stm32f373_benchmark_report.json — full measurements + ML scores
+    results/stm32f373_benchmark_report.txt  — human-readable summary
 """
 
 import sys
@@ -63,10 +63,12 @@ SAMPLE_SIZE = struct.calcsize(SAMPLE_FMT)   # 16
 SUMMARY_FMT  = '<IIIIIIIIIIIfffffff'
 SUMMARY_SIZE = struct.calcsize(SUMMARY_FMT)
 
-# ── Hardware constants (STM32H7 @ 480 MHz, Vdd=3.3V, ~120 mA active) ─────────
-HCLK_HZ         = 480_000_000
+# ── Hardware constants (STM32F373C8T @ 72 MHz, Vdd=3.3V) ────────────────────
+# Datasheet Table 28: IDD typ = 29.2 mA @ 72 MHz, 3.6V, peripherals off.
+# Derated to 3.3V ≈ 27 mA.
+HCLK_HZ         = 72_000_000
 VDD_V           = 3.3
-RUN_CURRENT_A   = 0.120   # whole-chip active; IDS duty fraction applied below
+RUN_CURRENT_A   = 0.027   # whole-chip active; IDS duty fraction applied below
 
 # ── UART helpers ─────────────────────────────────────────────────────────────
 
@@ -183,7 +185,7 @@ class DryRunLink:
 
 def run(port: str | None, n_samples: int | None, dry_run: bool):
     print("=" * 70)
-    print("STM32H7 CAN IDS — On-Board Inference Benchmark")
+    print("STM32F373 CAN IDS — On-Board Inference Benchmark")
     print("=" * 70)
 
     # ── Load test dataset ─────────────────────────────────────────────────
@@ -308,7 +310,7 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
 
     report = {
         'hardware': {
-            'mcu': 'STM32H7',
+            'mcu': 'STM32F373C8T',
             'hclk_hz': HCLK_HZ,
             'vdd_v': VDD_V,
             'active_run_current_a': RUN_CURRENT_A,
@@ -370,7 +372,7 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
     }
 
     # ── Save CSV ──────────────────────────────────────────────────────────
-    csv_path = RESULTS_DIR / 'stm32h7_benchmark_raw.csv'
+    csv_path = RESULTS_DIR / 'stm32f373_benchmark_raw.csv'
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=raw_rows[0].keys())
         writer.writeheader()
@@ -378,13 +380,13 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
     print(f"\n  Raw data → {csv_path}")
 
     # ── Save JSON ─────────────────────────────────────────────────────────
-    json_path = RESULTS_DIR / 'stm32h7_benchmark_report.json'
+    json_path = RESULTS_DIR / 'stm32f373_benchmark_report.json'
     with open(json_path, 'w') as f:
         json.dump(report, f, indent=2)
     print(f"  JSON     → {json_path}")
 
     # ── Print human-readable report ───────────────────────────────────────
-    txt_path = RESULTS_DIR / 'stm32h7_benchmark_report.txt'
+    txt_path = RESULTS_DIR / 'stm32f373_benchmark_report.txt'
     lines = _format_report(report)
     txt_path.write_text('\n'.join(lines))
     print(f"  Text     → {txt_path}")
@@ -404,7 +406,7 @@ def _format_report(r: dict) -> list[str]:
 
     lines = [
         "=" * 70,
-        "STM32H7 CAN IDS — On-Board Inference Benchmark Report",
+        "STM32F373 CAN IDS — On-Board Inference Benchmark Report",
         "=" * 70,
         "",
         f"Hardware : {hw['mcu']} @ {hw['hclk_hz']//1_000_000} MHz  "
@@ -430,7 +432,7 @@ def _format_report(r: dict) -> list[str]:
 
     lines += [
         "",
-        "── Timing (on STM32H7) ─────────────────────────────────────────────",
+        "── Timing (on STM32F373C8T) ────────────────────────────────────────",
         f"  Cycles   min/mean/max : {t['cycles_min']} / {t['cycles_mean']:.1f} / {t['cycles_max']}",
         f"  Time(µs) min/mean/max : {t['inf_us_min']} / {t['inf_us_mean']} / {t['inf_us_max']}",
         f"  Time(µs) p95 / p99    : {t['inf_us_p95']} / {t['inf_us_p99']}",
@@ -466,7 +468,7 @@ def _format_report(r: dict) -> list[str]:
 IDS_TASK_STACK_BYTES = 1024 * 4
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='STM32H7 CAN IDS host runner')
+    parser = argparse.ArgumentParser(description='STM32F373 CAN IDS host runner')
     parser.add_argument('--port',    default=None,
                         help='Serial port (e.g. /dev/tty.usbmodem14101)')
     parser.add_argument('--baud',    type=int, default=115200)
