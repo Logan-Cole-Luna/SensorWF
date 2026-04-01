@@ -48,11 +48,12 @@
 #include "stm32h7_can_ids_float32.h"
 #include "stm32h7_can_ids_scaler.h"
 
-#include "stm32f3xx_hal.h"
-#include "usart.h"
+#include "main.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+
+extern UART_HandleTypeDef huart2;
 
 /* ── Configuration ──────────────────────────────────────────────────────────── */
 

@@ -1,5 +1,13 @@
-#import "runner.h"
-#import "stm32f373_can_ids_benchmark.h"
+#include "runner.h"
+#include "stm32h7_can_ids_float32.h"
+#include "stm32h7_can_ids_scaler.h"
+
+void nn_runner(void)
+{
+    static float features[IDS_N_FEATURES] = {0};
+    ids_scale_features(features);
+    (void)ids_predict(features);
+}
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
@@ -8,7 +16,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
     if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &hdr, data) == HAL_OK)
     {
-    	// RUN
+    	(void)hdr;
+        (void)data;
 
     }
 }
