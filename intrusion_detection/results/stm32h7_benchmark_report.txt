@@ -1,0 +1,48 @@
+======================================================================
+STM32H7 CAN IDS — On-Board Inference Benchmark Report
+======================================================================
+
+Hardware : STM32H7 @ 480 MHz  Vdd=3.3V  Iactive≈120mA
+Model    : TinyDecisionTree (CAN)  39 nodes  depth 5
+Features : 15  (can_id_norm, dlc, data_mean, data_std, data_entropy, ...)
+Dataset  : 500 CAN frames (satellite subsystems)
+
+── ML Performance ─────────────────────────────────────────────────
+  Accuracy  : 0.9680
+  Precision : 0.9671
+  Recall    : 1.0000
+  F1-Score  : 0.9833
+  FPR       : 0.5333
+  Confusion : TP=470  TN=14  FP=16  FN=0
+
+  Per-attack-type:
+  Attack          Recall       FPR       N
+  ----------------------------------------
+  dos             1.0000    0.5333     152
+  fuzzy           1.0000    0.5333     310
+  spoofing        1.0000    0.5333       8
+
+── Timing (on STM32H7) ─────────────────────────────────────────────
+  Cycles   min/mean/max : 86 / 114.0 / 143
+  Time(µs) min/mean/max : 0.1792 / 0.2375 / 0.2979
+  Time(µs) p95 / p99    : 0.2646 / 0.2729
+  Std dev               : 0.0176 µs
+  At 100 Hz poll rate   : 0.0024% CPU duty
+
+── Resource Usage ──────────────────────────────────────────────────
+  Flash  (tree + scaler): 549 bytes  (0.536 KB)
+    Tree arrays          : 429 bytes
+    Scaler params        : 120 bytes
+  RAM    (feature buf)  : 60 bytes  (float[15] on stack)
+  RAM    (task stack)   : 4096 bytes
+  Stack  high-water max : 3400 bytes  (headroom: 696 bytes)
+  Heap   free (min obs) : 200,000 bytes
+
+── Energy (IDS model only) ─────────────────────────────────────────
+  Method: whole_chip_active_run_current × inference_duration
+  Whole-chip per-inf    : 94.0698 nJ
+  IDS duty @ 100 Hz     : 0.00240%
+  IDS power overhead    : 0.0002 µW  (at 100 Hz continuous)
+  Note: Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.
+
+======================================================================
