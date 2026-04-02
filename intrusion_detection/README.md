@@ -2,9 +2,26 @@
 
 Ultra-lightweight machine learning models for network intrusion detection on embedded systems (STM32 and similar microcontrollers).
 
-REAL-WORLD RESULTS: Validated on UNSW-NB15 dataset (257,673 samples). All models achieve 96-99% attack detection with sub-microsecond inference.
+This repository now supports two IDS paths:
+- Network IDS benchmarks (UNSW-NB15, NSL-KDD)
+- Benchmark-to-CAN conversion for satellite streaming and embedded CAN IDS training
 
-## Quick Stats (Real-World Performance)
+## Latest Benchmark-to-CAN Results (Phase 4B)
+
+TinyDecisionTree (depth 5), benchmark rows converted into CAN frame streams, then trained via CAN sliding-window features.
+
+| Source | Accuracy | Precision | Recall | F1 | FPR | ROC-AUC | Model Size | Inference |
+|-------|----------|-----------|--------|----|-----|---------|------------|-----------|
+| UNSW->CAN | 58.52% | 58.74% | 82.87% | 68.75% | 71.33% | 0.5802 | 5.87 KB | 0.02922 ms |
+| NSL->CAN  | 65.40% | 89.33% | 44.53% | 59.44% | 7.03%  | 0.7454 | 6.02 KB | 0.02983 ms |
+
+Interpretation for deployment:
+- UNSW->CAN favors high recall but is too noisy (very high false positives).
+- NSL->CAN is conservative (low FPR) and therefore safer for always-on satellite operation, but misses more attacks.
+
+Recommended on-board streaming dataset right now: NSL->CAN.
+
+## Quick Stats (Phase 2 Real-World Network IDS)
 
 | Model | Size | Latency | Recall | F1-Score | Best For |
 |-------|------|---------|--------|----------|----------|
@@ -28,9 +45,50 @@ pip install pandas numpy scikit-learn xgboost
 python scripts/train_and_evaluate.py
 ```
 
-### 3. View Results
+### 3. Convert Benchmark Data to CAN and Train (Phase 4B)
+```bash
+python scripts/phase4_benchmark_can_ids.py --dataset unsw
+python scripts/phase4_benchmark_can_ids.py --dataset nsl
+```
+
+Important (quality fix):
+- By default, Phase 4B now excludes protocol/meta CAN frames from feature extraction.
+- This reduces training on bookkeeping traffic and improves benchmark-to-CAN model stability.
+- To include them for ablation only:
+```bash
+python scripts/phase4_benchmark_can_ids.py --dataset nsl --include-meta-frames
+```
+
+Optional row caps (faster iteration):
+```bash
+python scripts/phase4_benchmark_can_ids.py --dataset nsl --max-train-rows 80000 --max-test-rows 20000
+```
+
+### 4. View Results
 ```bash
 cat results/evaluation_results.json
+cat results/phase4b_unsw_can_results.json
+cat results/phase4b_nsl_can_results.json
+```
+
+### 5. Generate Plots
+```bash
+python scripts/generate_plots.py
+```
+
+### 6. Deploy Trained Benchmark-to-CAN Model to Firmware Headers
+
+Generate dataset-specific scaler header:
+```bash
+python scripts/generate_scaler_header.py \
+   --scaler models/trained_models/phase4b_nsl_can_scaler.joblib \
+   --features models/trained_models/phase4b_nsl_can_feature_names.json \
+   --out models/trained_models/stm32f373_nsl_can_ids_scaler.h
+```
+
+Deploy NSL model + scaler into firmware include names used by EmbeddedBabel:
+```bash
+python scripts/deploy_phase4b_model_to_firmware.py --dataset nsl
 ```
 
 ## Project Structure
@@ -38,15 +96,23 @@ cat results/evaluation_results.json
 ```
 intrusion_detection/
 ├── datasets/
-│   └── SAMPLE/              # Synthetic test data (ready to use)
+│   ├── SAMPLE/                      # Synthetic test data
+│   ├── CAN_SATELLITE/               # Synthetic CAN pipeline data
+│   └── CAN_FROM_BENCHMARK/          # UNSW/NSL converted CAN datasets
 ├── models/
 │   └── lightweight_ids_models.py    # 5 models defined
 ├── scripts/
 │   ├── train_and_evaluate.py        # Train & benchmark models
-│   ├── setup_datasets.py            # Create synthetic data
-│   └── download_real_datasets.py    # Instructions for real data
+│   ├── phase4_benchmark_can_ids.py  # Benchmark->CAN train/eval/export
+│   ├── benchmark_to_can.py          # Convert UNSW/NSL to CAN frames
+│   ├── deploy_phase4b_model_to_firmware.py
+│   ├── generate_plots.py            # Paper/report plots
+│   └── host_inference_runner.py     # Stream test features to MCU
 ├── results/
-│   └── evaluation_results.json      # Test results
+│   ├── evaluation_results.json
+│   ├── phase4b_unsw_can_results.json
+│   ├── phase4b_nsl_can_results.json
+│   └── plots/
 ├── INTRUSION_DETECTION_REPORT.md    # Full research report
 └── README.md                         # This file
 ```
@@ -200,27 +266,83 @@ At 100 Hz detection rate with STM32L4:
 - Inference: ~100 µA·ms = 10 µW
 - Total (with 1 ms feature extraction): ~1 mW
 
+## Evaluation Protocol (Recommended)
+
+For each candidate model/dataset pair, evaluate in this order:
+
+1. Offline detection quality
+- Primary: FPR, Recall, ROC-AUC
+- Secondary: Accuracy, F1
+
+2. On-board suitability
+- Model flash size
+- Inference latency (ms)
+- Stability under streaming workload
+
+3. Operational fit
+- For autonomous onboard alarms, prioritize low FPR.
+- For forensic/offline review, prioritize high recall.
+
+Current decision for satellite streaming:
+- Use NSL->CAN model for primary flight-like run (lower FPR).
+- Keep UNSW->CAN as a high-recall secondary comparison/baseline.
+
+## Stream Through Satellite (Host Runner)
+
+Dry-run with benchmark-converted CAN features:
+```bash
+python scripts/host_inference_runner.py \
+   --dry-run \
+   --features-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv \
+   --attack-source-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv \
+   --model-path models/trained_models/phase4b_nsl_can_decision_tree.joblib \
+   --scaler-path models/trained_models/phase4b_nsl_can_scaler.joblib
+```
+
+With hardware connected:
+```bash
+python scripts/host_inference_runner.py \
+   --port /dev/tty.usbmodemXXXX \
+   --features-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv \
+   --attack-source-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv
+```
+
+Recommended full run order (satellite inference path):
+1. Train NSL->CAN model (meta frames excluded by default):
+```bash
+python scripts/phase4_benchmark_can_ids.py --dataset nsl
+```
+2. Generate NSL scaler header:
+```bash
+python scripts/generate_scaler_header.py \
+   --scaler models/trained_models/phase4b_nsl_can_scaler.joblib \
+   --features models/trained_models/phase4b_nsl_can_feature_names.json \
+   --out models/trained_models/stm32f373_nsl_can_ids_scaler.h
+```
+3. Deploy active firmware headers:
+```bash
+python scripts/deploy_phase4b_model_to_firmware.py --dataset nsl
+```
+4. Build/flash EmbeddedBabel firmware.
+5. Stream benchmark-converted test traffic via host runner command above.
+
 ## Next Steps
 
-1. **Real-World Testing**
-   - Download UNSW-NB15 or CIC-IDS dataset
-   - Retrain models on real network traffic
-   - Validate performance on satellite telemetry
+1. **Threshold tuning for NSL->CAN**
+   - raise recall while keeping FPR in acceptable mission range
+   - add precision-recall threshold sweep in phase4_benchmark_can_ids.py
 
-2. **Model Quantization**
-   - Apply INT8 quantization (target: < 5 KB)
-   - Measure accuracy loss
-   - Test on actual STM32 hardware
+2. **Feature packetization refinement**
+   - test alternative CAN chunk layouts and timing jitter models
+   - evaluate impact on sliding-window feature stability
 
-3. **Feature Engineering**
-   - Analyze satellite network patterns
-   - Select most discriminative features
-   - Optimize for real-time performance
+3. **Hybrid dataset strategy**
+   - combine NSL->CAN low-FPR profile with selective UNSW->CAN high-recall examples
+   - retrain and compare ROC/FPR frontier
 
-4. **Integration**
-   - Convert to C code for STM32
-   - Implement preprocessing pipeline
-   - Test end-to-end on hardware
+4. **End-to-end EmbeddedBabel validation**
+   - stream benchmark-converted features through MCU link
+   - validate latency/resource reports under sustained run
 
 ## Key Findings
 
@@ -239,13 +361,11 @@ At 100 Hz detection rate with STM32L4:
 
 ## Status
 
-PHASE 2 COMPLETE - Real-World Validation:
-- Model research and identification
-- Training framework implemented
-- Evaluation on synthetic data (1000 samples)
-- Real-world dataset validation on UNSW-NB15 (257K samples)
-- Performance: 96-99% attack detection, 0.3-147 microseconds inference
-- Ready for Phase 3: Optimization and STM32 integration
+PHASE 4B COMPLETE - Benchmark-to-CAN Pipeline:
+- UNSW/NSL tabular datasets converted into CAN frame streams
+- CAN feature extraction + TinyDecisionTree training completed
+- STM32 headers exported for both UNSW->CAN and NSL->CAN models
+- Plotting updated to include benchmark-to-CAN comparisons
 
 ---
 

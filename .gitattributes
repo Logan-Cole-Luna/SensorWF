@@ -1,1 +1,2 @@
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+intrusion_detection/datasets/CAN_FROM_BENCHMARK/unsw_can_train_features.csv filter=lfs diff=lfs merge=lfs -text

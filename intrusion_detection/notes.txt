@@ -26,8 +26,13 @@ DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 5. Run the benchmark from your host machine:
 
 # With hardware connected
-python scripts/host_inference_runner.py --port /dev/tty.usbmodem14101
+python scripts/host_inference_runner.py \
+  --port /dev/tty.usbmodemXXXX \
+  --features-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv \
+  --attack-source-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv
 
+
+  
 # Dry-run (no hardware, uses sklearn model)
 python scripts/host_inference_runner.py --dry-run --samples 5000
 Isolation mechanism — the firmware wraps every ids_predict() call with vTaskSuspendAll() / xTaskResumeAll(). The scheduler, CAN Rx ISRs, ADCS telemetry, and comms tasks are all frozen during the DWT measurement window. The only thing running is the tree traversal. UART Rx is briefly re-enabled between samples to receive the next feature vector, then locked out again before the inference starts.
