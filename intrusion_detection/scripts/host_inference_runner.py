@@ -27,6 +27,7 @@ import time
 import json
 import csv
 import math
+from datetime import UTC, datetime
 import joblib
 import numpy as np
 import pandas as pd
@@ -115,14 +116,14 @@ class DryRunLink:
     Simulates firmware responses using the Python sklearn model.
     Useful for validating the host script without hardware.
     """
-    def __init__(self):
-        self._clf    = joblib.load(MODELS_DIR / 'can_decision_tree.joblib')
-        self._scaler = joblib.load(MODELS_DIR / 'can_scaler.joblib')
+    def __init__(self, model_path: Path, scaler_path: Path):
+        self._clf    = joblib.load(model_path)
+        self._scaler = joblib.load(scaler_path)
         self._pending_features = None
         self._pending_gt       = None
         self._n_samples        = 0
         self._results          = []
-        print('  [dry-run] Using sklearn model as MCU simulator')
+        print(f'  [dry-run] Using sklearn model as MCU simulator: {model_path.name}')
 
     def send(self, data: bytes):
         # Parse outgoing bytes to know what the MCU would receive
@@ -183,14 +184,30 @@ class DryRunLink:
 
 # ── Main runner ───────────────────────────────────────────────────────────────
 
-def run(port: str | None, n_samples: int | None, dry_run: bool):
+def run(
+    port: str | None,
+    n_samples: int | None,
+    dry_run: bool,
+    features_csv: Path,
+    attack_source_csv: Path,
+    model_path: Path,
+    scaler_path: Path,
+    output_dir: Path,
+    output_prefix: str,
+    run_id: str | None,
+):
     print("=" * 70)
     print("STM32F373 CAN IDS — On-Board Inference Benchmark")
     print("=" * 70)
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if not run_id:
+        run_id = datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')
+    base_name = f"{output_prefix}_{run_id}"
+
     # ── Load test dataset ─────────────────────────────────────────────────
     print("\n[1/4] Loading CAN test features...")
-    feat_df = pd.read_csv(DATASET_DIR / 'can_test_features.csv')
+    feat_df = pd.read_csv(features_csv)
     X_raw   = feat_df[FEATURE_NAMES].values.astype(np.float32)
     y_true  = feat_df['label'].values.astype(np.uint8)
 
@@ -204,7 +221,7 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
     # ── Connect ───────────────────────────────────────────────────────────
     print("\n[2/4] Connecting to MCU...")
     if dry_run:
-        link = DryRunLink()
+        link = DryRunLink(model_path=model_path, scaler_path=scaler_path)
     else:
         link = MCULink(port)
         link.flush_log()
@@ -275,7 +292,7 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
     h_fpr   = h_fp / (h_fp + h_tn) if (h_fp + h_tn) > 0 else 0
 
     # Per-attack-type breakdown from raw rows joined with original dataset
-    attack_types = pd.read_csv(DATASET_DIR / 'satellite_can_test.csv')['attack_type'].values[:n]
+    attack_types = pd.read_csv(attack_source_csv)['attack_type'].values[:n]
     per_attack = {}
     for atype in sorted(set(attack_types)):
         if atype == 'normal':
@@ -302,6 +319,36 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
     #   2. IDS-only: scale chip current by fraction of time spent in ids_predict
     ids_duty     = float(inf_us_arr.mean()) / (1e6 / 100)   # at 100 Hz poll
     energy_ids_nj = VDD_V * RUN_CURRENT_A * ids_duty * (float(inf_us_arr.mean())/1e6) * 1e9
+
+    # Total run energy and per-class (normal/attack) energy breakdown
+    whole_chip_energy_per_inf_nj_arr = VDD_V * RUN_CURRENT_A * (inf_us_arr / 1e6) * 1e9
+    ids_scale = ids_duty
+    ids_energy_per_inf_nj_arr = whole_chip_energy_per_inf_nj_arr * ids_scale
+
+    def _class_energy(mask: np.ndarray) -> dict:
+        count = int(mask.sum())
+        if count == 0:
+            return {
+                'n_samples': 0,
+                'whole_chip_energy_total_nj': 0.0,
+                'whole_chip_energy_per_inf_nj': 0.0,
+                'ids_energy_total_nj_estimate': 0.0,
+                'ids_energy_per_inf_nj_estimate': 0.0,
+            }
+        wc_total = float(whole_chip_energy_per_inf_nj_arr[mask].sum())
+        ids_total = float(ids_energy_per_inf_nj_arr[mask].sum())
+        return {
+            'n_samples': count,
+            'whole_chip_energy_total_nj': round(wc_total, 4),
+            'whole_chip_energy_per_inf_nj': round(wc_total / count, 6),
+            'ids_energy_total_nj_estimate': round(ids_total, 6),
+            'ids_energy_per_inf_nj_estimate': round(ids_total / count, 6),
+        }
+
+    normal_mask = (h_true == 0)
+    attack_mask = (h_true == 1)
+    total_whole_chip_energy_nj = float(whole_chip_energy_per_inf_nj_arr.sum())
+    total_ids_energy_nj = float(ids_energy_per_inf_nj_arr.sum())
 
     # Flash usage: tree + scaler = 429 + ~600 bytes
     tree_flash_bytes  = 429
@@ -366,13 +413,24 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
             'energy_per_inf_nj_estimate':   round(energy_ids_nj, 6),
             'energy_per_inf_pj_estimate':   round(energy_ids_nj * 1000, 4),
             'power_overhead_uw_at_100hz':   round(energy_ids_nj * 1e-9 * 100 * 1e6, 4),
+            'total_run_energy_nj_whole_chip': round(total_whole_chip_energy_nj, 4),
+            'total_run_energy_uj_whole_chip': round(total_whole_chip_energy_nj / 1000, 6),
+            'total_run_energy_nj_ids_estimate': round(total_ids_energy_nj, 6),
+            'total_run_energy_pj_ids_estimate': round(total_ids_energy_nj * 1000, 4),
+            'energy_per_class': {
+                'normal': _class_energy(normal_mask),
+                'attack': _class_energy(attack_mask),
+            },
         },
         'host_stream_time_s': round(stream_total_s, 3),
         'firmware_summary_match': bool(abs(acc - h_acc) < 0.001),
     }
 
     # ── Save CSV ──────────────────────────────────────────────────────────
-    csv_path = RESULTS_DIR / 'stm32f373_benchmark_raw.csv'
+    for i, at in enumerate(attack_types):
+        raw_rows[i]['attack_type'] = str(at)
+
+    csv_path = output_dir / f'{base_name}_raw.csv'
     with open(csv_path, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=raw_rows[0].keys())
         writer.writeheader()
@@ -380,16 +438,56 @@ def run(port: str | None, n_samples: int | None, dry_run: bool):
     print(f"\n  Raw data → {csv_path}")
 
     # ── Save JSON ─────────────────────────────────────────────────────────
-    json_path = RESULTS_DIR / 'stm32f373_benchmark_report.json'
+    json_path = output_dir / f'{base_name}_report.json'
+    report['run'] = {
+        'run_id': run_id,
+        'timestamp_utc': datetime.now(UTC).isoformat(),
+        'dry_run': bool(dry_run),
+        'port': port,
+        'features_csv': str(features_csv),
+        'attack_source_csv': str(attack_source_csv),
+        'model_path': str(model_path),
+        'scaler_path': str(scaler_path),
+        'output_dir': str(output_dir),
+        'output_prefix': output_prefix,
+    }
     with open(json_path, 'w') as f:
         json.dump(report, f, indent=2)
     print(f"  JSON     → {json_path}")
 
     # ── Print human-readable report ───────────────────────────────────────
-    txt_path = RESULTS_DIR / 'stm32f373_benchmark_report.txt'
+    txt_path = output_dir / f'{base_name}_report.txt'
     lines = _format_report(report)
     txt_path.write_text('\n'.join(lines))
     print(f"  Text     → {txt_path}")
+
+    # Save per-attack summary as CSV for plotting convenience
+    per_attack_csv = output_dir / f'{base_name}_per_attack.csv'
+    with open(per_attack_csv, 'w', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=['attack_type', 'recall', 'fpr', 'n_attacks'])
+        w.writeheader()
+        for atype, vals in sorted(per_attack.items()):
+            w.writerow({
+                'attack_type': atype,
+                'recall': vals['recall'],
+                'fpr': vals['fpr'],
+                'n_attacks': vals['n_attacks'],
+            })
+    print(f"  Per-attack CSV → {per_attack_csv}")
+
+    # Save run manifest to quickly discover all artifacts from this invocation
+    manifest = {
+        'run_id': run_id,
+        'files': {
+            'raw_csv': str(csv_path),
+            'report_json': str(json_path),
+            'report_txt': str(txt_path),
+            'per_attack_csv': str(per_attack_csv),
+        },
+    }
+    manifest_path = output_dir / f'{base_name}_manifest.json'
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+    print(f"  Manifest → {manifest_path}")
     print()
     print('\n'.join(lines))
 
@@ -456,6 +554,17 @@ def _format_report(r: dict) -> list[str]:
         f"  IDS duty @ 100 Hz     : {e['ids_duty_fraction_at_100hz']*100:.5f}%",
         f"  IDS power overhead    : {e['power_overhead_uw_at_100hz']:.4f} µW  "
         f"(at 100 Hz continuous)",
+        f"  Total run energy      : {e['total_run_energy_nj_whole_chip']:.4f} nJ "
+        f"({e['total_run_energy_uj_whole_chip']:.6f} µJ) [whole-chip]",
+        f"  Total IDS estimate    : {e['total_run_energy_nj_ids_estimate']:.6f} nJ "
+        f"({e['total_run_energy_pj_ids_estimate']:.4f} pJ)",
+        "  Energy per class:",
+        f"    normal  n={e['energy_per_class']['normal']['n_samples']:,}  "
+        f"whole={e['energy_per_class']['normal']['whole_chip_energy_per_inf_nj']:.6f} nJ/inf  "
+        f"ids={e['energy_per_class']['normal']['ids_energy_per_inf_nj_estimate']:.6f} nJ/inf",
+        f"    attack  n={e['energy_per_class']['attack']['n_samples']:,}  "
+        f"whole={e['energy_per_class']['attack']['whole_chip_energy_per_inf_nj']:.6f} nJ/inf  "
+        f"ids={e['energy_per_class']['attack']['ids_energy_per_inf_nj_estimate']:.6f} nJ/inf",
         f"  Note: {e['note']}",
         "",
         "=" * 70,
@@ -476,6 +585,41 @@ if __name__ == '__main__':
                         help='Number of samples to run (default: all)')
     parser.add_argument('--dry-run', action='store_true',
                         help='Simulate MCU using the sklearn model (no hardware needed)')
+    parser.add_argument(
+        '--features-csv',
+        default=str(DATASET_DIR / 'can_test_features.csv'),
+        help='Feature CSV with columns: FEATURE_NAMES + label',
+    )
+    parser.add_argument(
+        '--attack-source-csv',
+        default=str(DATASET_DIR / 'satellite_can_test.csv'),
+        help='Raw CAN CSV containing attack_type column for per-attack metrics',
+    )
+    parser.add_argument(
+        '--model-path',
+        default=str(MODELS_DIR / 'can_decision_tree.joblib'),
+        help='Model path used by --dry-run simulator',
+    )
+    parser.add_argument(
+        '--scaler-path',
+        default=str(MODELS_DIR / 'can_scaler.joblib'),
+        help='Scaler path used by --dry-run simulator',
+    )
+    parser.add_argument(
+        '--output-dir',
+        default=str(RESULTS_DIR),
+        help='Directory to write benchmark artifacts',
+    )
+    parser.add_argument(
+        '--output-prefix',
+        default='stm32f373_benchmark',
+        help='Filename prefix for generated benchmark artifacts',
+    )
+    parser.add_argument(
+        '--run-id',
+        default=None,
+        help='Optional run id override (default: UTC timestamp)',
+    )
     args = parser.parse_args()
 
     if not args.dry_run and args.port is None:
@@ -483,4 +627,15 @@ if __name__ == '__main__':
         sys.exit(1)
 
     n = None if args.samples == 'all' else int(args.samples)
-    run(port=args.port, n_samples=n, dry_run=args.dry_run)
+    run(
+        port=args.port,
+        n_samples=n,
+        dry_run=args.dry_run,
+        features_csv=Path(args.features_csv),
+        attack_source_csv=Path(args.attack_source_csv),
+        model_path=Path(args.model_path),
+        scaler_path=Path(args.scaler_path),
+        output_dir=Path(args.output_dir),
+        output_prefix=args.output_prefix,
+        run_id=args.run_id,
+    )
