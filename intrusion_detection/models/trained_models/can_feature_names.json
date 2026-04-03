@@ -1,1 +1,1 @@
-["can_id_norm", "dlc", "data_mean", "data_std", "data_entropy", "data_range", "hamming_dist", "inter_arrival_mean", "inter_arrival_std", "id_freq", "bus_load", "unique_ids", "dlc_anomaly", "id_is_known", "payload_delta"]
+["can_id_norm", "dlc", "data_mean", "data_std", "data_entropy", "data_range", "hamming_dist", "inter_arrival_mean", "id_freq", "bus_load", "unique_ids", "dlc_anomaly", "id_is_known", "payload_delta"]

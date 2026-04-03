@@ -2,7 +2,7 @@
   "phase": 4,
   "dataset": "Synthetic Satellite CAN Bus",
   "model": "TinyDecisionTree",
-  "n_features": 15,
+  "n_features": 14,
   "feature_names": [
     "can_id_norm",
     "dlc",
@@ -12,7 +12,6 @@
     "data_range",
     "hamming_dist",
     "inter_arrival_mean",
-    "inter_arrival_std",
     "id_freq",
     "bus_load",
     "unique_ids",
@@ -30,43 +29,43 @@
   ],
   "train_attack_ratio": 0.5475813000270677,
   "test_attack_ratio": 0.5470383275261324,
-  "train_time_s": 0.0575,
+  "train_time_s": 0.0517,
   "tree_depth": 5,
   "n_leaves": 20,
   "n_nodes": 39,
   "model_size_kb": 4.146,
-  "inference_time_ms": 0.029046,
-  "roc_auc": 0.9916,
+  "inference_time_ms": 0.029977,
+  "roc_auc": 0.9912,
   "overall": {
-    "accuracy": 0.9789,
-    "precision": 0.9635,
-    "recall": 0.9993,
-    "f1": 0.9811,
-    "fpr": 0.0457,
-    "tn": 2233,
-    "fp": 107,
-    "fn": 2,
-    "tp": 2824
+    "accuracy": 0.9787,
+    "precision": 0.9638,
+    "recall": 0.9986,
+    "f1": 0.9809,
+    "fpr": 0.0453,
+    "tn": 2234,
+    "fp": 106,
+    "fn": 4,
+    "tp": 2822
   },
   "per_attack_type": {
     "dos": {
-      "recall": 1.0,
-      "fpr": 0.0457,
+      "recall": 0.9989,
+      "fpr": 0.0453,
       "n_samples": 894
     },
     "fuzzy": {
-      "recall": 1.0,
-      "fpr": 0.0457,
+      "recall": 0.9994,
+      "fpr": 0.0453,
       "n_samples": 1797
     },
     "replay": {
       "recall": 0.9778,
-      "fpr": 0.0457,
+      "fpr": 0.0453,
       "n_samples": 90
     },
     "spoofing": {
       "recall": 1.0,
-      "fpr": 0.0457,
+      "fpr": 0.0453,
       "n_samples": 45
     }
   }

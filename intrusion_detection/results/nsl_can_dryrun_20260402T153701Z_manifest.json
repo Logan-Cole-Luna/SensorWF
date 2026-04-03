@@ -1,0 +1,9 @@
+{
+  "run_id": "20260402T153701Z",
+  "files": {
+    "raw_csv": "results/nsl_can_dryrun_20260402T153701Z_raw.csv",
+    "report_json": "results/nsl_can_dryrun_20260402T153701Z_report.json",
+    "report_txt": "results/nsl_can_dryrun_20260402T153701Z_report.txt",
+    "per_attack_csv": "results/nsl_can_dryrun_20260402T153701Z_per_attack.csv"
+  }
+}

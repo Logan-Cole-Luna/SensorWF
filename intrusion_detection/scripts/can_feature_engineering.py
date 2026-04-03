@@ -1,13 +1,13 @@
 """
 CAN Bus Feature Engineering for Satellite IDS
 ----------------------------------------------
-Extracts 15 features from a sliding window of CAN frames suitable for
-a TinyDecisionTree running on STM32H7.
+Extracts 14 features from a sliding window of CAN frames suitable for
+a TinyDecisionTree running on STM32.
 
 Input: DataFrame with columns [timestamp, can_id, dlc, d0..d7, label]
 Output: DataFrame of per-frame feature vectors
 
-Features (15 total):
+Features (14 total):
   1.  can_id_norm       — normalized arbitration ID
   2.  dlc               — data length code (0–8)
   3.  data_mean         — mean of data bytes
@@ -16,17 +16,22 @@ Features (15 total):
   6.  data_range        — max − min of data bytes
   7.  hamming_dist      — bit-level distance from previous frame with same ID
   8.  inter_arrival_mean — mean Δt between frames with same ID (window)
-  9.  inter_arrival_std  — std  Δt between frames with same ID (window)
-  10. id_freq           — how often this CAN ID appears in window (msgs/s)
-  11. bus_load          — total messages/s across all IDs in window
-  12. unique_ids        — number of distinct IDs seen in window
-  13. dlc_anomaly       — 1 if DLC differs from this ID's baseline DLC
-  14. id_is_known       — 1 if this CAN ID was seen in the training baseline
-  15. payload_delta     — L1 distance between this frame's data and previous
+  9.  id_freq           — how often this CAN ID appears in window (msgs/s)
+  10. bus_load          — total messages/s across all IDs in window
+  11. unique_ids        — number of distinct IDs seen in window
+  12. dlc_anomaly       — 1 if DLC differs from this ID's baseline DLC
+  13. id_is_known       — 1 if this CAN ID was seen in the training baseline
+  14. payload_delta     — L1 distance between this frame's data and previous
                           frame with the same ID
 
-The window is 50 frames (configurable). Features 8–12 are computed over
-the window; features 1–7, 13–15 are per-frame with rolling lookback.
+NOTE: inter_arrival_std was removed. Computing a per-ID running standard
+deviation on bare-metal firmware requires storing either all window
+timestamps (excessive RAM per CAN ID) or a three-accumulator Welford
+pass that complicates the fixed-size inference path. The mean alone
+(a simple running sum / count) is sufficient to flag timing disruptions.
+
+The window is 50 frames (configurable). Features 8–11 are computed over
+the window; features 1–7, 12–14 are per-frame with rolling lookback.
 """
 
 import numpy as np
@@ -72,7 +77,7 @@ def extract_features(df: pd.DataFrame, baseline: dict, window: int = WINDOW) -> 
     df must have columns: timestamp (float seconds), can_id (int),
     dlc (int), d0..d7 (int 0-255), label (0=normal, 1=attack).
 
-    Returns a DataFrame with 15 feature columns + 'label'.
+    Returns a DataFrame with 14 feature columns + 'label'.
     """
     known_ids = set(baseline.keys())
     baseline_dlc = baseline
@@ -127,10 +132,8 @@ def extract_features(df: pd.DataFrame, baseline: dict, window: int = WINDOW) -> 
         if len(times) >= 2:
             deltas = np.diff(times)
             f_ia_mean = float(deltas.mean())
-            f_ia_std  = float(deltas.std())
         else:
             f_ia_mean = 0.0
-            f_ia_std  = 0.0
 
         # Window-level stats
         win_list = list(win_buf)
@@ -156,7 +159,6 @@ def extract_features(df: pd.DataFrame, baseline: dict, window: int = WINDOW) -> 
             'data_range':         f_data_range,
             'hamming_dist':       float(f_hamming),
             'inter_arrival_mean': f_ia_mean,
-            'inter_arrival_std':  f_ia_std,
             'id_freq':            f_id_freq,
             'bus_load':           f_bus_load,
             'unique_ids':         f_unique_ids,
@@ -171,7 +173,7 @@ def extract_features(df: pd.DataFrame, baseline: dict, window: int = WINDOW) -> 
 
 FEATURE_NAMES = [
     'can_id_norm', 'dlc', 'data_mean', 'data_std', 'data_entropy',
-    'data_range', 'hamming_dist', 'inter_arrival_mean', 'inter_arrival_std',
+    'data_range', 'hamming_dist', 'inter_arrival_mean',
     'id_freq', 'bus_load', 'unique_ids', 'dlc_anomaly', 'id_is_known',
     'payload_delta',
 ]

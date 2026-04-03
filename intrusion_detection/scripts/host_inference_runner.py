@@ -46,7 +46,7 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 FEATURE_NAMES = [
     'can_id_norm', 'dlc', 'data_mean', 'data_std', 'data_entropy',
-    'data_range', 'hamming_dist', 'inter_arrival_mean', 'inter_arrival_std',
+    'data_range', 'hamming_dist', 'inter_arrival_mean',
     'id_freq', 'bus_load', 'unique_ids', 'dlc_anomaly', 'id_is_known',
     'payload_delta',
 ]
@@ -130,7 +130,7 @@ class DryRunLink:
         if len(data) == 3 and data[0] == ord('S'):
             self._n_samples = struct.unpack('<H', data[1:])[0]
             self._results.clear()
-        elif len(data) == 60:   # 15 × float32
+        elif len(data) == 56:   # 14 × float32
             self._pending_features = np.frombuffer(data, dtype=np.float32).copy()
         elif len(data) == 1:    # ground-truth label
             gt = data[0]
@@ -138,7 +138,7 @@ class DryRunLink:
                 feat_scaled = self._scaler.transform(self._pending_features.reshape(1, -1))[0]
                 pred = int(self._clf.predict(feat_scaled.reshape(1, -1))[0])
                 cycles      = int(np.random.normal(115, 8))   # realistic for 480 MHz tree
-                stack_bytes = 64    # canary measurement: float[15] + locals
+                stack_bytes = 64    # canary measurement: float[14] + locals
                 self._results.append((pred, gt, cycles, stack_bytes))
                 self._pending_features = None
 
@@ -239,7 +239,7 @@ def run(
     t_stream_start = time.perf_counter()
 
     for i, (features, label) in enumerate(zip(X_raw, y_true)):
-        # Send 15 × float32 (60 bytes) then 1-byte label
+        # Send 14 × float32 (56 bytes) then 1-byte label
         link.send(features.tobytes())
         link.send(bytes([label]))
 
@@ -350,9 +350,9 @@ def run(
     total_whole_chip_energy_nj = float(whole_chip_energy_per_inf_nj_arr.sum())
     total_ids_energy_nj = float(ids_energy_per_inf_nj_arr.sum())
 
-    # Flash usage: tree + scaler = 429 + ~600 bytes
+    # Flash usage: tree + scaler = 429 + ~112 bytes
     tree_flash_bytes  = 429
-    scaler_flash_bytes = 15 * 4 * 2   # 15 features × 4 bytes × (mean + scale)
+    scaler_flash_bytes = 14 * 4 * 2   # 14 features × 4 bytes × (mean + scale)
     total_flash_bytes  = tree_flash_bytes + scaler_flash_bytes
 
     report = {
