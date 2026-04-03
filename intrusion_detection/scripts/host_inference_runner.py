@@ -41,7 +41,7 @@ from sklearn.metrics import (
 
 MODELS_DIR  = Path('models/trained_models')
 RESULTS_DIR = Path('results')
-DATASET_DIR = Path('datasets/CAN_SATELLITE')
+DATASET_DIR = Path('datasets/CAN_FROM_BENCHMARK')
 RESULTS_DIR.mkdir(exist_ok=True)
 
 FEATURE_NAMES = [
@@ -587,22 +587,22 @@ if __name__ == '__main__':
                         help='Simulate MCU using the sklearn model (no hardware needed)')
     parser.add_argument(
         '--features-csv',
-        default=str(DATASET_DIR / 'can_test_features.csv'),
+        default=str(DATASET_DIR / 'nsl_can_test_features.csv'),
         help='Feature CSV with columns: FEATURE_NAMES + label',
     )
     parser.add_argument(
         '--attack-source-csv',
-        default=str(DATASET_DIR / 'satellite_can_test.csv'),
+        default=str(DATASET_DIR / 'nsl_can_test.csv'),
         help='Raw CAN CSV containing attack_type column for per-attack metrics',
     )
     parser.add_argument(
         '--model-path',
-        default=str(MODELS_DIR / 'can_decision_tree.joblib'),
+        default=str(MODELS_DIR / 'phase4b_nsl_can_decision_tree.joblib'),
         help='Model path used by --dry-run simulator',
     )
     parser.add_argument(
         '--scaler-path',
-        default=str(MODELS_DIR / 'can_scaler.joblib'),
+        default=str(MODELS_DIR / 'phase4b_nsl_can_scaler.joblib'),
         help='Scaler path used by --dry-run simulator',
     )
     parser.add_argument(

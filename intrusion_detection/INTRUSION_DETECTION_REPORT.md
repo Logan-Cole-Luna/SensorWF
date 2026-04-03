@@ -1,3 +1,17 @@
+# To Run Inference:
+
+```
+source .venv/bin/activate
+python intrusion_detection/scripts/host_inference_runner.py \
+  --port /dev/tty.usbmodemXXXX \
+  --features-csv intrusion_detection/datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv \
+  --attack-source-csv intrusion_detection/datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv \
+  --model-path intrusion_detection/models/trained_models/phase4b_nsl_can_decision_tree.joblib \
+  --scaler-path intrusion_detection/models/trained_models/phase4b_nsl_can_scaler.joblib \
+  --output-prefix nsl_can_eval_sat
+```
+
+
 # Lightweight Intrusion Detection System for Embedded Satellites
 ## Research & Testing Report
 

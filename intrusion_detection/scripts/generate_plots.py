@@ -6,11 +6,13 @@ Comprehensive visualization suite for the Satellite Intrusion Detection System p
 
 Generates the following figures into results/plots/:
   01_model_comparison.png         - Phase 1: All 5 models across 4 metrics
-  02_tree_structure_phase2.png    - Decision tree structure (UNSW-NB15)
-  03_tree_structure_can.png       - Decision tree structure (CAN Bus)
+    02_tree_structure_phase2.png    - Decision tree structure (NSL-KDD)
+    03_tree_structure_can.png       - Decision tree structure (NSL->CAN)
   04_confusion_matrices.png       - Confusion matrices for Phase 2, 2b, 4
   05_threshold_sweep.png          - Precision / Recall / F1 vs threshold
-  06_quantization_tradeoffs.png   - Float32 vs Int16 vs Int8 comparison
+    06a_quantization_metrics.png    - Float32 vs Int16 vs Int8 metrics
+    06b_quantization_size.png       - Model size by quantization
+    06c_quantization_latency.png    - Inference latency by quantization
     07_benchmark_can_comparison.png - UNSW->CAN vs NSL->CAN overall comparison
   08_cross_dataset_heatmap.png    - Performance heatmap across datasets
   09_feature_importance.png       - Feature importances (Phase 2 + CAN)
@@ -64,9 +66,9 @@ MODEL_COLORS = {
     'TinyXGBoost':       PURPLE,
 }
 
-def save(fig, name):
+def save(fig, name, dpi=150):
     path = PLOTS / name
-    fig.savefig(path, dpi=150, bbox_inches='tight')
+    fig.savefig(path, dpi=dpi, bbox_inches='tight')
     plt.close(fig)
     print(f"  Saved {path.name}")
 
@@ -125,7 +127,7 @@ def plot_model_comparison():
 # ══════════════════════════════════════════════════════════════════════════════
 # Fig 02 & 03 — Decision Tree Structures
 # ══════════════════════════════════════════════════════════════════════════════
-def plot_tree_structure(model_path, feature_names, title, out_name, figsize=(22, 10)):
+def plot_tree_structure(model_path, feature_names, title, out_name, figsize=(36, 18), fontsize=10):
     clf = joblib.load(model_path)
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -135,29 +137,32 @@ def plot_tree_structure(model_path, feature_names, title, out_name, figsize=(22,
         class_names=['Normal', 'Attack'],
         filled=True,
         rounded=True,
-        fontsize=8,
+        fontsize=fontsize,
         ax=ax,
-        impurity=True,
-        proportion=False,
-        precision=3,
+        impurity=False,
+        proportion=True,
+        precision=2,
     )
+    # Paper-oriented layout: generous canvas and margins for readable leaf labels.
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.04)
     ax.set_title(title, fontsize=14, fontweight='bold', pad=12)
-    save(fig, out_name)
+    save(fig, out_name, dpi=320)
 
 
 def plot_trees():
-    # Phase 2 – UNSW-NB15
-    with open(MODELS / 'phase2_feature_names.json') as f:
+    # Phase 2B – NSL-KDD
+    with open(MODELS / 'phase2b_feature_names.json') as f:
         feat2 = json.load(f)
     plot_tree_structure(
-        MODELS / 'phase2_decision_tree.joblib',
+        MODELS / 'phase2b_decision_tree.joblib',
         feat2,
-        'TinyDecisionTree – UNSW-NB15 Network IDS (depth=5, 26 leaves)',
+        'TinyDecisionTree - NSL-KDD Network IDS',
         '02_tree_structure_phase2.png',
-        figsize=(24, 11),
+        figsize=(40, 20),
+        fontsize=10,
     )
 
-    # Phase 4B – CAN from benchmark (prefer NSL model if available)
+    # Phase 4B – CAN from benchmark (NSL->CAN)
     model_path = MODELS / 'phase4b_nsl_can_decision_tree.joblib'
     feat_path = MODELS / 'phase4b_nsl_can_feature_names.json'
     if not model_path.exists() or not feat_path.exists():
@@ -169,9 +174,10 @@ def plot_trees():
     plot_tree_structure(
         model_path,
         feat_can,
-        'TinyDecisionTree – Satellite CAN IDS (benchmark-to-CAN)',
+        'TinyDecisionTree - Satellite CAN Bus IDS (NSL->CAN)',
         '03_tree_structure_can.png',
-        figsize=(22, 11),
+        figsize=(36, 16),
+        fontsize=10,
     )
 
 
@@ -270,15 +276,13 @@ def plot_quantization():
     size = [q[p]['size_kb']           for p in precisions]
     inf  = [q[p]['inference_us']      for p in precisions]
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle('Phase 3 – Quantization Trade-offs (UNSW-NB15)', fontsize=14, fontweight='bold')
-
     q_colors = ['#2196F3', '#FF9800', '#F44336']
 
-    # Panel 1: Grouped metric bars
+    # 6a: Grouped metric bars
     x = np.arange(len(precisions))
     w = 0.2
-    ax = axes[0]
+    fig, ax = plt.subplots(figsize=(8, 5))
+    fig.suptitle('Phase 3 - Quantization Metrics (NSL-KDD)', fontsize=13, fontweight='bold')
     ax.bar(x - 1.5*w, acc, w, label='Accuracy',  color='#3498db')
     ax.bar(x - 0.5*w, rec, w, label='Recall',    color='#e74c3c')
     ax.bar(x + 0.5*w, f1v, w, label='F1',        color='#2ecc71')
@@ -292,23 +296,30 @@ def plot_quantization():
     for i, (a, r, f, fp_) in enumerate(zip(acc, rec, f1v, fpr)):
         for j, (v, offset) in enumerate(zip([a, r, f, fp_], [-1.5, -0.5, 0.5, 1.5])):
             ax.text(i + offset*w, v + 1, f'{v:.0f}', ha='center', fontsize=7)
-
-    # Panel 2: Model size
-    axes[1].bar([p.upper() for p in precisions], size, color=q_colors, edgecolor='white')
-    axes[1].set_ylabel('Size (KB)')
-    axes[1].set_title('Model Size', fontweight='bold')
-    for i, v in enumerate(size):
-        axes[1].text(i, v + 0.01, f'{v:.3f} KB', ha='center', fontsize=10, fontweight='bold')
-
-    # Panel 3: Inference time
-    axes[2].bar([p.upper() for p in precisions], inf, color=q_colors, edgecolor='white')
-    axes[2].set_ylabel('Inference Time (µs)')
-    axes[2].set_title('Inference Latency', fontweight='bold')
-    for i, v in enumerate(inf):
-        axes[2].text(i, v + 0.05, f'{v:.2f} µs', ha='center', fontsize=10, fontweight='bold')
-
     fig.tight_layout()
-    save(fig, '06_quantization_tradeoffs.png')
+    save(fig, '06a_quantization_metrics.png')
+
+    # 6b: Model size
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    fig.suptitle('Phase 3 - Quantization Size (NSL-KDD)', fontsize=13, fontweight='bold')
+    ax.bar([p.upper() for p in precisions], size, color=q_colors, edgecolor='white')
+    ax.set_ylabel('Size (KB)')
+    ax.set_title('Model Size', fontweight='bold')
+    for i, v in enumerate(size):
+        ax.text(i, v + 0.01, f'{v:.3f} KB', ha='center', fontsize=10, fontweight='bold')
+    fig.tight_layout()
+    save(fig, '06b_quantization_size.png')
+
+    # 6c: Inference time
+    fig, ax = plt.subplots(figsize=(6.5, 5))
+    fig.suptitle('Phase 3 - Quantization Latency (NSL-KDD)', fontsize=13, fontweight='bold')
+    ax.bar([p.upper() for p in precisions], inf, color=q_colors, edgecolor='white')
+    ax.set_ylabel('Inference Time (µs)')
+    ax.set_title('Inference Latency', fontweight='bold')
+    for i, v in enumerate(inf):
+        ax.text(i, v + 0.05, f'{v:.2f} µs', ha='center', fontsize=10, fontweight='bold')
+    fig.tight_layout()
+    save(fig, '06c_quantization_latency.png')
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -438,10 +449,10 @@ def plot_feature_importances():
     fig.suptitle('Feature Importances – TinyDecisionTree (Gini)', fontsize=14, fontweight='bold')
 
     configs = [
-        (MODELS / 'phase2_decision_tree.joblib', MODELS / 'phase2_feature_names.json',
-         'UNSW-NB15 (34 features)', axes[0], '#3498db'),
-        (MODELS / 'can_decision_tree.joblib',    MODELS / 'can_feature_names.json',
-         'CAN Bus IDS (15 features)', axes[1], '#e74c3c'),
+           (MODELS / 'phase2b_decision_tree.joblib', MODELS / 'phase2b_feature_names.json',
+            'NSL-KDD (41 features)', axes[0], '#3498db'),
+           (MODELS / 'phase4b_nsl_can_decision_tree.joblib', MODELS / 'phase4b_nsl_can_feature_names.json',
+            'CAN Bus IDS (NSL->CAN, 15 features)', axes[1], '#e74c3c'),
     ]
 
     for model_path, feat_path, title, ax, color in configs:
