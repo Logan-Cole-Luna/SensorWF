@@ -1,0 +1,27 @@
+{
+  "description": "Weighted average across both recorded SATLL runs (NSL n=520 telem, UNSW n=2890 telem; NSL n=48000 STM, UNSW n=300000 STM)",
+  "date": "2026-04-06",
+  "total_stm_samples": 348000,
+  "total_telemetry_samples": 3410,
+  "stm_weighted_avg": {
+    "cycles_mean": 301.866,
+    "inf_us_mean": 4.1924,
+    "inf_us_std_rss": 0.0194,
+    "cpu_duty_pct_at_100hz": 0.04193,
+    "ids_energy_per_inf_pj": 156.609,
+    "ids_power_overhead_uw_at_100hz": 0.01563
+  },
+  "satll_weighted_avg": {
+    "obc_power_W": 0.9849,
+    "sys_power_W": 1.8288,
+    "plat_power_W": 1.3117,
+    "comms_power_W": 0.2714
+  },
+  "power_budget_combined": {
+    "obc_mean_mW": 984.9,
+    "ids_overhead_uw": 0.01563,
+    "ids_overhead_mW": 1.563e-05,
+    "ids_fraction_of_obc_pct": "1.59e-06",
+    "obc_plus_ids_mW": 984.900016
+  }
+}

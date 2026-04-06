@@ -1,0 +1,57 @@
+======================================================================
+STM32F373 CAN IDS — On-Board Inference Benchmark Report
+======================================================================
+
+Hardware : STM32F373C8T @ 72 MHz  Vdd=3.3V  Iactive≈27mA
+Model    : TinyDecisionTree (CAN)  39 nodes  depth 5
+Features : 15  (can_id_norm, dlc, data_mean, data_std, data_entropy, ...)
+Dataset  : 200 CAN frames (satellite subsystems)
+
+── ML Performance ─────────────────────────────────────────────────
+  Accuracy  : 0.7300
+  Precision : 0.9595
+  Recall    : 0.5820
+  F1-Score  : 0.7245
+  FPR       : 0.0385
+  Confusion : TP=71  TN=75  FP=3  FN=51
+
+  Per-attack-type:
+  Attack          Recall       FPR       N
+  ----------------------------------------
+  apache2         0.8571    0.2078       7
+  guess_passwd    0.1429    0.2078       7
+  mailbomb        0.5714    0.2078       7
+  mscan           0.2857    0.2078       7
+  neptune         0.4762    0.2078      63
+  saint           0.4286    0.2078       7
+  smurf           0.3889    0.2078      18
+  warezmaster     0.7143    0.2078       7
+
+── Timing (on STM32F373C8T) ────────────────────────────────────────
+  Cycles   min/mean/max : 94 / 114.5 / 134
+  Time(µs) min/mean/max : 1.3056 / 1.5901 / 1.8611
+  Time(µs) p95 / p99    : 1.7646 / 1.8611
+  Std dev               : 0.1062 µs
+  At 100 Hz poll rate   : 0.0159% CPU duty
+
+── Resource Usage ──────────────────────────────────────────────────
+  Flash  (tree + scaler): 549 bytes  (0.536 KB)
+    Tree arrays          : 429 bytes
+    Scaler params        : 120 bytes
+  RAM    (feature buf)  : 60 bytes  (float[15] on stack)
+  Stack  used (canary)  : 64 bytes  (headroom: 960 bytes)
+  Heap                  : bare-metal, no heap (no dynamic allocation)
+
+── Energy (IDS model only) ─────────────────────────────────────────
+  Method: whole_chip_active_run_current × inference_duration
+  Whole-chip per-inf    : 141.6814 nJ
+  IDS duty @ 100 Hz     : 0.01590%
+  IDS power overhead    : 0.0023 µW  (at 100 Hz continuous)
+  Total run energy      : 28336.2750 nJ (28.336275 µJ) [whole-chip]
+  Total IDS estimate    : 4.505861 nJ (4505.8613 pJ)
+  Energy per class:
+    normal  n=78  whole=141.344712 nJ/inf  ids=0.022476 nJ/inf
+    attack  n=122  whole=141.896619 nJ/inf  ids=0.022564 nJ/inf
+  Note: Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.
+
+======================================================================

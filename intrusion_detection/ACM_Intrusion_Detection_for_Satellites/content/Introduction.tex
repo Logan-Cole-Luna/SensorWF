@@ -1,0 +1,54 @@
+\section{Introduction}
+
+Satellite systems are foundational to modern energy infrastructure. Electric power grids depend on GPS timing for frequency synchronization and fault isolation; renewable energy installations rely on satellite links for remote telemetry and supervisory control; and grid operators use satellite imagery and communications to coordinate distributed energy resources across wide geographic areas. The National Institute of Standards and Technology (NIST) reports that financial services, telecommunications, and electric power sectors are critically dependent on GPS timing signals, with a single-day GPS outage potentially resulting in losses exceeding \$1.6 billion in the United States alone \cite{NIST2022gps, Brattle2024}. This reliance has intensified alongside the rapid expansion of the orbital satellite population. By early 2025, approximately 14,900 satellites were in orbit around Earth, marking a 31.5\% increase since mid-2023, with about 12,000 actively operational \cite{Pixalytics2025, NanoAvionics2025}. Of these, 4,517 satellites were launched in 2025, representing a 58\% increase over 2024. Commercial operators accounted for 87\% of these launches \cite{PayloadSpace2025}. The European Space Agency projects that the total satellite constellation could reach 100,000 by 2030 \cite{ESA2025}.
+
+\subsection{The Current Cyber Threat}
+
+The growing strategic importance of satellite infrastructure has made it an increasingly prominent target for cyberattacks. The Center for Strategic and International Studies (CSIS), in its Space Threat Assessment, characterizes cyber operations against space infrastructure as low-barrier counterspace weapons that can be executed by non-state actors with minimal financial resources \cite{CSIS2023}. Both state and non-state actors are actively exploiting this vulnerability. The European Repository of Cyber Incidents (ERCI) documented five space-sector cyberattacks in both 2023 and 2024, while nation-state actors such as Russia, Iran, and North Korea have intensified campaigns against aerospace and satellite infrastructure \cite{CSIS2025}. The impact of a successful intrusion often extends beyond the targeted satellite. For instance, on February 24, 2022, one hour before Russia's invasion of Ukraine, a cyberattack compromised Viasat's KA-SAT broadband network using the \textit{AcidRain} wiper malware. This attack disabled tens of thousands of modems across Europe and directly disconnected 5,800 Enercon wind turbines in Germany by severing their satellite-based remote monitoring links~\cite{Viasat2022, SentinelOne2022}. This incident illustrates a recurring pattern in which attacks on satellite communications propagate silently across sectors and borders. Energy infrastructure is particularly susceptible: a single compromised satellite link can simultaneously affect grid monitoring, wind farm control, and pipeline supervisory systems across an entire region.
+
+\subsection{The Energy Cost of Onboard Security}
+
+The deployment of cybersecurity measures on satellites is fundamentally limited by energy and computational constraints. Commercial and CubeSat-class satellites, which typically use off-the-shelf components and legacy protocols, are especially vulnerable because they lack onboard anomaly detection and security-by-design features \cite{LSE2023, ENISA2025}. For example, a 3U CubeSat in LEO generates just about 10~W of power, shared among all subsystems \cite{Nason2002, Arnold2012}, while key onboard computers may operate at 15~mW \cite{S4Space}. Conventional machine learning-based intrusion detection systems (IDS) demand watt-scale computation and dynamic memory allocation, which are incompatible with these constraints unless expensive hardware acceleration is used \cite{Arnold2012}. Although cybersecurity risks are increasingly recognized, there remains a gap between policy guidance (e.g., from NIST, CISA, and Space Policy Directive-5) and the deployment of practical, resource-aware onboard defenses \cite{NewSpace2024, NIST2022, SPD52020}.
+
+\subsection{Motivation and Contributions}
+ 
+Existing research on onboard intrusion detection for satellites often overlooks practical deployment on resource-constrained platforms. Past work typically assumes computational resources unavailable in CubeSat-class satellites and does not jointly evaluate detection performance and hardware feasibility metrics such as flash footprint, latency, and per-inference energy. To fill this gap, we present a lightweight IDS tailored for satellite Controller Area Network (CAN) bus traffic, specifically engineered for minimal resource consumption. Our system occupies 541~bytes of flash, executes in 4.2~\textmu s on a STM32F373C8T microcontroller at 72~MHz, and imposes an inference-specific power increment of at most 48--53~\textmu W at 100~Hz---bounded by direct SATLL EPS telemetry. It uses 14 domain-specific CAN features compiled into a static C header without runtime heap allocation. In-domain evaluation achieves 99.86\% recall on native satellite CAN traffic; cross-dataset evaluation on UNSW-NB15 and NSL-KDD demonstrates generalization \cite{UNSW2015, NSLKDD2009}, with TinyDecisionTree the only candidate satisfying both the $\leq$8~KB flash and $\leq$100~\textmu s latency constraints.
+
+%----------------------------
+%----------------------------
+
+\section{Background and Related Work}
+\label{sec:background}
+
+\subsection{Related Work}
+
+The literature on space cyber defense can be categorized into three primary areas: telemetry anomaly detection, network-level intrusion detection systems (IDS), and testbed and dataset infrastructure.
+
+Telemetry-focused approaches, including long short-term memory (LSTM)-based sequence models, exhibit high sensitivity to anomalies in spacecraft health data \cite{Hundman2018, OPSSAT2025}. While effective for fault monitoring, these methods are not directly applicable to packet-level cyber intrusions. An adversary may preserve normal telemetry patterns while injecting malicious Controller Area Network (CAN) frames, thereby evading detection by health-stream anomaly detectors.
+
+Research on network-level intrusion detection systems, such as CubeSat deep learning classifiers, demonstrates the feasibility of applying machine learning to onboard traffic analysis \cite{ESA2023}. However, existing models often require memory and computational resources that exceed the capabilities of low-cost flight microcontrollers, particularly in the absence of hardware acceleration, which is typically incompatible with CubeSat power constraints. Furthermore, previous studies do not report energy consumption per inference, leaving the energy aspect of deployment feasibility unexplored.
+
+Initiatives focused on datasets and testbeds, such as CuCD-ID and AegisSat, have substantially enhanced reproducibility in space security research \cite{CuCDID2026, AegisSat2025}. These advancements motivate the next practical step: translating promising models into deterministic, heap-free firmware and providing explicit, joint reporting of detection quality, latency, flash memory usage, and energy consumption. Securing the onboard network of energy-supporting satellites---those providing GPS timing, grid telemetry relay, and renewable energy monitoring---requires solutions deployable within the strict power budgets of operational spacecraft.
+
+\subsection{Evaluation Platform: KISPE Satellite Learning Laboratory}
+
+Our IDS is developed and evaluated using the KISPE Satellite Learning Laboratory (SATLL), a functionally representative CubeSat-class satellite simulator designed for practical spacecraft engineering experimentation \cite{KISPE2025, Sellers2022} (an example of the SATLL is shown in Figure \ref{fig:SATLL}, a technical diagram is provided in Figure \ref{fig:diagram}). CubeSats are small, standardized spacecraft---typically 10$\times$10$\times$10~cm per unit---increasingly deployed for commercial communications, Earth observation, and remote sensing that supports energy infrastructure monitoring \cite{Sellers2022}. The SATLL features a comprehensive, integrated avionics stack within an approximately $100 \times 100 \times 265$~mm structure, incorporating all major satellite subsystems interconnected via a Controller Area Network (CAN) bus. This communication architecture mirrors that of operational small satellites and serves as the IDS's direct target.
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.4\linewidth]{images/Sat.png}
+    \caption{KISPE Satellite Learning Laboratory (SATLL)}
+    \label{fig:SATLL}
+\end{figure}
+
+The Electrical Power Subsystem (EPS) provides 7.4V via a 5000~mAh Li-Ion battery with a solar array and maximum power point tracking (MPPT) charging, distributing regulated 5V and 3.3V rails to all subsystems. The Communications subsystem operates as a UHF half-duplex transceiver (868~MHz in the European configuration used here) with a CAN-interfaced RP2040-based communication node, transmitting telemetry to and receiving telecommands from the SCOTTI ground station software over a matched ground station radio \cite{KISPE2025}. For more information on the SATLL's onboard hardware, please refer to Appendix \ref{app:satll}.
+
+\begin{comment}
+    
+\subsection{Datasets and Benchmarks}
+
+\subsubsection{NSL-KDD}
+
+\subsubsection{UNSW-NB15}
+\end{comment}

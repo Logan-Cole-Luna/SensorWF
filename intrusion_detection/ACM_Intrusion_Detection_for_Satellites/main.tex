@@ -1,0 +1,297 @@
+%%
+%% Commands for TeXCount
+%TC:macro \cite [option:text,text]
+%TC:macro \citep [option:text,text]
+%TC:macro \citet [option:text,text]
+%TC:envir table 0 1
+%TC:envir table* 0 1
+%TC:envir tabular [ignore] word
+%TC:envir displaymath 0 word
+%TC:envir math 0 word
+%TC:envir comment 0 0
+%%
+%% The first command in your LaTeX source must be the \documentclass
+%% command.
+%%
+%% For submission and review of your manuxscript please change the
+%% command to \documentclass[manuscript, screen, review]{acmart}.
+%%
+%% When submitting camera ready or to TAPS, please change the command
+%% to \documentclass[sigconf]{acmart} or whichever template is required
+%% for your publication.
+%%
+%%
+%\documentclass[manuscript,screen,review]{acmart}
+
+\documentclass[sigconf,screen]{acmart}
+
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+%% Rights management information.  This information is sent to you
+%% when you complete the rights form.  These commands have SAMPLE
+%% values in them; it is your responsibility as an author to replace
+%% the commands and values with those provided to you when you
+%% complete the rights form.
+\setcopyright{acmlicensed}
+\copyrightyear{2026}
+\acmYear{2026}
+\acmDOI{XXXXXXX.XXXXXXX}
+%% These commands are for a PROCEEDINGS abstract or paper.
+\acmConference[Conference acronym 'XX]{Make sure to enter the correct
+  conference title from your rights confirmation email}{June 03--05,
+  2018}{Woodstock, NY}
+%%
+%%  Uncomment \acmBooktitle if the title of the proceedings is different
+%%  from ``Proceedings of ...''!
+%%
+%%\acmBooktitle{Woodstock '18: ACM Symposium on Neural Gaze Detection,
+%%  June 03--05, 2018, Woodstock, NY}
+\acmISBN{978-1-4503-XXXX-X/2018/06}
+
+
+%%
+%% Submission ID.
+%% Use this when submitting an article to a sponsored event. You'll
+%% receive a unique submission ID from the organizers
+%% of the event, and this ID should be used as the parameter to this command.
+%%\acmSubmissionID{123-A56-BU3}
+
+%%
+%% For managing citations, it is recommended to use bibliography
+%% files in BibTeX format.
+%%
+%% You can then either use BibTeX with the ACM-Reference-Format style,
+%% or BibLaTeX with the acmnumeric or acmauthoryear sytles, that include
+%% support for advanced citation of software artefact from the
+%% biblatex-software package, also separately available on CTAN.
+%%
+%% Look at the sample-*-biblatex.tex files for templates showcasing
+%% the biblatex styles.
+%%
+
+%%
+%% The majority of ACM publications use numbered citations and
+%% references.  The command \citestyle{authoryear} switches to the
+%% "author year" style.
+%%
+%% If you are preparing content for an event
+%% sponsored by ACM SIGGRAPH, you must use the "author year" style of
+%% citations and references.
+%% Uncommenting
+%% the next command will enable that style.
+%%\citestyle{acmauthoryear}
+
+
+\usepackage{tabularx}
+\usepackage{comment}
+\usepackage[normalem]{ulem}
+
+
+% --- Algorithms ---
+\usepackage{algorithm}
+
+\usepackage[noend]{algpseudocode}
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+\floatname{algorithm}{Algorithm}
+
+% --- TikZ + scaling support ---
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, calc, positioning, fit, backgrounds, shapes.geometric}
+\usepackage{adjustbox}  % <--- prevents figure overflow
+
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{subcaption}
+ \usepackage{multirow}
+
+
+% --- tcolorbox ---
+\usepackage[most]{tcolorbox}
+% Default tcolorbox: always fit inside the text width
+\tcbset{
+    width=\linewidth,
+    colback=gray!10,
+    colframe=gray!60,
+    boxrule=0.5pt,
+    arc=3pt,
+    left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+
+% --- Prevent TikZ figures from overflowing ---
+% Wrap any oversized tikzpicture inside adjustbox automatically
+\newenvironment{tikzboxed}
+{\begin{adjustbox}{max width=\linewidth}\begin{tikzpicture}}
+{\end{tikzpicture}\end{adjustbox}}
+
+
+\newcommand\Logan[1]{\leavevmode{\footnotesize\textbf{[Logan: #1]}}}
+
+
+%%
+%% end of the preamble, start of the body of the document source.
+\begin{document}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+\title{Energy-Efficient Embedded Cybersecurity for Satellite Avionics}
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+%% Of note is the shared affiliation of the first two authors, and the
+%% "authornote" and "authornotemark" commands
+%% used to denote shared contribution to the research.
+\author{Sirio Jansen-Sánchez}
+\email{jansenss@my.erau.edu}
+\orcid{0009-0001-6498-418X}
+\authornote{These authors contributed equally to this work.}
+\affiliation{%
+  \institution{Embry-Riddle Aeronautical University}
+\city{Daytona Beach}
+  \state{Florida}
+  \country{USA}
+}
+\author{Logan Luna}
+\email{lambethl@my.erau.edu}
+\orcid{0009-0001-0713-4074}
+\authornotemark[1]
+%\email{webmaster@marysville-ohio.com}
+\affiliation{%
+  \institution{Embry-Riddle Aeronautical University}
+  \city{Daytona Beach}
+  \state{Florida}
+  \country{USA}
+}
+\author{Joseph Rigo}
+\email{rigoj1@my.erau.edu}
+\orcid{0009-0007-9844-9672}
+%\email{webmaster@marysville-ohio.com}
+\affiliation{%
+  \institution{Embry-Riddle Aeronautical University}
+\city{Daytona Beach}
+  \state{Florida}
+  \country{USA}
+}
+\author{Author}
+\email{trovato@corporation.com}
+\orcid{1234-5678-9012}
+\email{webmaster@marysville-ohio.com}
+\affiliation{%
+  \institution{Embry-Riddle Aeronautical University}
+\city{Daytona Beach}
+  \state{Florida}
+  \country{USA}
+}
+\author{Author}
+\email{trovato@corporation.com}
+\orcid{1234-5678-9012}
+\email{webmaster@marysville-ohio.com}
+\affiliation{%
+  \institution{Embry-Riddle Aeronautical University}
+\city{Daytona Beach}
+  \state{Florida}
+  \country{USA}
+}
+
+%%
+%% The abstract is a short summary of the work to be presented in the
+%% article, 100 words.
+\begin{abstract}
+Satellites serve as essential communication backbones for distributed energy infrastructure; however, their onboard networks are often insufficiently protected against cyberattacks. We introduce a lightweight intrusion detection system (IDS) for satellite Controller Area Network (CAN) bus traffic, occupying 541 bytes of flash memory and executing in 4.2 microseconds on an STM32F373C8T microcontroller operating at 72 MHz. Our system extracts 14 domain-specific CAN features and implements a depth-5 decision tree as static C arrays without heap allocation. Comprehensive hardware firmware validation across 348,000 classified frames demonstrates the following results: for native satellite CAN traffic, the IDS achieves 99.86\% recall and 0.9912 ROC-AUC across four attack classes (DoS, Fuzzy, Spoofing, Replay); for UNSW-NB15 encoded as CAN streams, 93.64\% recall and 69.97\% F1; and for NSL-KDD, 52.88\% recall, 86.65\% precision, and 65.68\% F1 with a 10.76\% false positive rate. Concurrent SATLL EPS telemetry quantifies the IDS power consumption at two levels. The inference increment, representing the marginal algorithmic cost at 100 Hz, is at most 48–53 microWatts (upper bound: $I_\text{base} \times V_{dd} \times t_\text{inf} \times f_\text{poll}$, measured $I_\text{base} = 35\text{--}38$~mA), which is less than 0.004\% of the 1,273 mW ADCS overhead during sensor experiments. The complete evaluation board draws 164–176 mW from the satellite payload port (115–125 mW for constant MCU active-run, approximately 49 mW for the USB bridge and peripherals). This overhead can be eliminated through native OBDH integration, reducing the residual IDS cost to approximately 40 microWatts.\end{abstract}
+
+%%
+%% The code below is generated by the tool at http://dl.acm.org/ccs.cfm.
+%% Please copy and paste the code instead of the example below.
+%%
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10002978.10002997.10002999</concept_id>
+       <concept_desc>Security and privacy~Intrusion detection systems</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10002978.10003001.10003003</concept_id>
+       <concept_desc>Security and privacy~Embedded systems security</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10010583.10010662.10010668</concept_id>
+       <concept_desc>Hardware~Energy distribution</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10010583.10010662.10010674</concept_id>
+       <concept_desc>Hardware~Power estimation and optimization</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Security and privacy~Intrusion detection systems}
+\ccsdesc[500]{Security and privacy~Embedded systems security}
+\ccsdesc[500]{Hardware~Energy distribution}
+\ccsdesc[500]{Hardware~Power estimation and optimization}
+
+
+%\ccsdesc[500]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+%\ccsdesc[300]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+%\ccsdesc{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+%\ccsdesc[100]{Do Not Use This Code~Generate the Correct Terms for Your Paper}
+
+%%
+%% Keywords. The author(s) should pick words that accurately describe
+%% the work being presented. Separate the keywords with commas.
+\keywords{Words}
+
+\received{20 February 2007}
+\received[revised]{12 March 2009}
+\received[accepted]{5 June 2009}
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
+% \tableofcontents
+
+\input{content/introduction}
+
+\input{content/Methodology}
+
+\input{content/Results}
+
+\input{content/Conclusion}
+
+%%
+%% The acknowledgments section is defined using the "acks" environment
+%% (and NOT an unnumbered section). This ensures the proper
+%% identification of the section in the article metadata, and the
+%% consistent spelling of the heading.
+
+% \begin{acks}
+% To Robert, for the bagels and explaining CMYK and color spaces.
+% \end{acks}
+
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+
+%%
+\appendix
+
+\input{content/Appendix}
+
+\end{document}
+\endinput
+%%
+%% End of file `sample-manuscript.tex'.

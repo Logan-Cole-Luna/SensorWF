@@ -1,0 +1,167 @@
+{
+  "hardware": {
+    "mcu": "STM32F373C8T",
+    "hclk_hz": 72000000,
+    "vdd_v": 3.3,
+    "active_run_current_a": 0.027
+  },
+  "model": {
+    "name": "TinyDecisionTree (CAN)",
+    "n_features": 15,
+    "feature_names": [
+      "can_id_norm",
+      "dlc",
+      "data_mean",
+      "data_std",
+      "data_entropy",
+      "data_range",
+      "hamming_dist",
+      "inter_arrival_mean",
+      "inter_arrival_std",
+      "id_freq",
+      "bus_load",
+      "unique_ids",
+      "dlc_anomaly",
+      "id_is_known",
+      "payload_delta"
+    ],
+    "tree_nodes": 39,
+    "tree_depth": 5,
+    "flash_bytes": 549,
+    "flash_kb": 0.536
+  },
+  "performance": {
+    "n_samples": 1000,
+    "accuracy": 0.688,
+    "precision": 0.8404,
+    "recall": 0.5186,
+    "f1": 0.6414,
+    "fpr": 0.1147,
+    "tp": 279,
+    "tn": 409,
+    "fp": 53,
+    "fn": 259,
+    "per_attack_type": {
+      "apache2": {
+        "recall": 0.4286,
+        "fpr": 0.3398,
+        "n_attacks": 21
+      },
+      "back": {
+        "recall": 0.4286,
+        "fpr": 0.3398,
+        "n_attacks": 21
+      },
+      "guess_passwd": {
+        "recall": 0.2222,
+        "fpr": 0.3398,
+        "n_attacks": 63
+      },
+      "httptunnel": {
+        "recall": 0.5714,
+        "fpr": 0.3398,
+        "n_attacks": 7
+      },
+      "mailbomb": {
+        "recall": 0.2857,
+        "fpr": 0.3398,
+        "n_attacks": 21
+      },
+      "mscan": {
+        "recall": 0.2653,
+        "fpr": 0.3398,
+        "n_attacks": 49
+      },
+      "neptune": {
+        "recall": 0.3363,
+        "fpr": 0.3398,
+        "n_attacks": 223
+      },
+      "processtable": {
+        "recall": 0.4286,
+        "fpr": 0.3398,
+        "n_attacks": 21
+      },
+      "saint": {
+        "recall": 0.4286,
+        "fpr": 0.3398,
+        "n_attacks": 7
+      },
+      "satan": {
+        "recall": 0.0,
+        "fpr": 0.3398,
+        "n_attacks": 7
+      },
+      "smurf": {
+        "recall": 0.3333,
+        "fpr": 0.3398,
+        "n_attacks": 42
+      },
+      "snmpgetattack": {
+        "recall": 0.2857,
+        "fpr": 0.3398,
+        "n_attacks": 7
+      },
+      "snmpguess": {
+        "recall": 0.2857,
+        "fpr": 0.3398,
+        "n_attacks": 7
+      },
+      "warezmaster": {
+        "recall": 0.4286,
+        "fpr": 0.3398,
+        "n_attacks": 35
+      },
+      "xsnoop": {
+        "recall": 0.0,
+        "fpr": 0.3398,
+        "n_attacks": 7
+      }
+    }
+  },
+  "timing": {
+    "cycles_min": 90,
+    "cycles_max": 140,
+    "cycles_mean": 114.13,
+    "inf_us_min": 1.25,
+    "inf_us_max": 1.9444,
+    "inf_us_mean": 1.5852,
+    "inf_us_std": 0.109,
+    "inf_us_p95": 1.7639,
+    "inf_us_p99": 1.8196
+  },
+  "resource_usage": {
+    "stack_used_bytes_min": 64,
+    "stack_used_bytes_max": 64,
+    "stack_canary_budget": 1024,
+    "stack_headroom_bytes": 960,
+    "flash_bytes_tree": 429,
+    "flash_bytes_scaler": 120,
+    "flash_bytes_total": 549,
+    "ram_bytes_features": 60,
+    "note": "bare-metal, no heap (no dynamic allocation)"
+  },
+  "energy": {
+    "method": "whole_chip_active_run_current \u00d7 inference_duration",
+    "note": "Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.",
+    "whole_chip_energy_per_inf_nj": 141.2371,
+    "ids_duty_fraction_at_100hz": 0.000159,
+    "energy_per_inf_nj_estimate": 0.022388,
+    "energy_per_inf_pj_estimate": 22.3882,
+    "power_overhead_uw_at_100hz": 0.0022
+  },
+  "host_stream_time_s": 0.074,
+  "firmware_summary_match": true,
+  "run": {
+    "run_id": "20260402T153701Z",
+    "timestamp_utc": "2026-04-02T15:37:01.877818Z",
+    "dry_run": true,
+    "port": null,
+    "features_csv": "datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv",
+    "attack_source_csv": "datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv",
+    "model_path": "models/trained_models/phase4b_nsl_can_decision_tree.joblib",
+    "scaler_path": "models/trained_models/phase4b_nsl_can_scaler.joblib",
+    "output_dir": "results",
+    "output_prefix": "nsl_can_dryrun"
+  }
+}

@@ -1,0 +1,80 @@
+======================================================================
+STM32F373 CAN IDS — On-Board Inference Benchmark Report
+======================================================================
+
+Hardware : STM32F373C8T @ 72 MHz  Vdd=3.3V  Iactive≈27mA
+Model    : TinyDecisionTree (CAN)  39 nodes  depth 5
+Features : 15  (can_id_norm, dlc, data_mean, data_std, data_entropy, ...)
+Dataset  : 48,000 CAN frames (satellite subsystems)
+
+── ML Performance ─────────────────────────────────────────────────
+  Accuracy  : 0.6855
+  Precision : 0.8665
+  Recall    : 0.5288
+  F1-Score  : 0.6568
+  FPR       : 0.1076
+  Confusion : TP=14446  TN=18456  FP=2226  FN=12872
+
+  Per-attack-type:
+  Attack          Recall       FPR       N
+  ----------------------------------------
+  apache2         0.3441    0.3363   1,575
+  back            0.3504    0.3363     819
+  buffer_overflow    0.5238    0.3363      21
+  guess_passwd    0.3676    0.3363   2,688
+  httptunnel      0.3111    0.3363     315
+  ipsweep         0.3799    0.3363     329
+  land            0.2857    0.3363      21
+  mailbomb        0.4521    0.3363     595
+  mscan           0.3532    0.3363   2,163
+  multihop        0.2619    0.3363      42
+  named           0.2500    0.3363      28
+  neptune         0.3524    0.3363   9,821
+  nmap            0.2484    0.3363     161
+  phf             0.2857    0.3363       7
+  pod             0.4190    0.3363     105
+  portsweep       0.3531    0.3363     371
+  processtable    0.3653    0.3363   1,407
+  ps              0.3673    0.3363      49
+  rootkit         0.5476    0.3363      42
+  saint           0.3564    0.3363     693
+  satan           0.3216    0.3363   1,393
+  sendmail        0.0952    0.3363      21
+  smurf           0.3601    0.3363   1,505
+  snmpgetattack    0.3720    0.3363     371
+  snmpguess       0.3280    0.3363     567
+  teardrop        0.2000    0.3363      35
+  udpstorm        0.8571    0.3363       7
+  warezmaster     0.3745    0.3363   2,024
+  xlock           0.5714    0.3363      14
+  xsnoop          0.0952    0.3363      21
+  xterm           0.0714    0.3363      14
+
+── Timing (on STM32F373C8T) ────────────────────────────────────────
+  Cycles   min/mean/max : 301 / 302.9 / 306
+  Time(µs) min/mean/max : 4.1806 / 4.2065 / 4.25
+  Time(µs) p95 / p99    : 4.2361 / 4.2361
+  Std dev               : 0.0133 µs
+  At 100 Hz poll rate   : 0.0421% CPU duty
+
+── Resource Usage ──────────────────────────────────────────────────
+  Flash  (tree + scaler): 541 bytes  (0.528 KB)
+    Tree arrays          : 429 bytes
+    Scaler params        : 112 bytes
+  RAM    (feature buf)  : 60 bytes  (float[15] on stack)
+  Stack  used (canary)  : 0 bytes  (headroom: 1024 bytes)
+  Heap                  : bare-metal, no heap (no dynamic allocation)
+
+── Energy (IDS model only) ─────────────────────────────────────────
+  Method: whole_chip_active_run_current × inference_duration
+  Whole-chip per-inf    : 373.7250 nJ
+  IDS duty @ 100 Hz     : 0.04210%
+  IDS power overhead    : 0.0158 µW  (at 100 Hz continuous)
+  Total run energy      : 17990324.5500 nJ (17990.324550 µJ) [whole-chip]
+  Total IDS estimate    : 7567.615446 nJ (7567615.4465 pJ)
+  Energy per class:
+    normal  n=20,682  whole=374.767200 nJ/inf  ids=0.157646 nJ/inf
+    attack  n=27,318  whole=374.822071 nJ/inf  ids=0.157669 nJ/inf
+  Note: Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.
+
+======================================================================

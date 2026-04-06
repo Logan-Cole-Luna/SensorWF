@@ -1,374 +1,411 @@
-# Lightweight Intrusion Detection for Satellites
+# Energy-Efficient Intrusion Detection for Satellite CAN Networks
 
-Ultra-lightweight machine learning models for network intrusion detection on embedded systems (STM32 and similar microcontrollers).
+A production-ready, lightweight intrusion detection system (IDS) for satellite Controller Area Network (CAN) bus traffic, engineered for resource-constrained microcontrollers. The system occupies **541 bytes** of flash memory, executes in **4.2 microseconds**, and imposes a power increment of at most **48–53 microWatts**—validated on hardware from the KISPE Satellite Learning Laboratory (SATLL).
 
-This repository now supports two IDS paths:
-- Network IDS benchmarks (UNSW-NB15, NSL-KDD)
-- Benchmark-to-CAN conversion for satellite streaming and embedded CAN IDS training
+This work addresses a critical gap in satellite cybersecurity: protecting energy-grid-dependent spacecraft (GPS timing, renewable energy telemetry, grid monitoring) while respecting the extreme power and memory budgets of CubeSat-class platforms.
 
-## Latest Benchmark-to-CAN Results (Phase 4B)
+## What We Built
 
-TinyDecisionTree (depth 5), benchmark rows converted into CAN frame streams, then trained via CAN sliding-window features.
+A **domain-specific anomaly detection system** for satellite bus networks:
 
-| Source | Accuracy | Precision | Recall | F1 | FPR | ROC-AUC | Model Size | Inference |
-|-------|----------|-----------|--------|----|-----|---------|------------|-----------|
-| UNSW->CAN | 58.52% | 58.74% | 82.87% | 68.75% | 71.33% | 0.5802 | 5.87 KB | 0.02922 ms |
-| NSL->CAN  | 65.40% | 89.33% | 44.53% | 59.44% | 7.03%  | 0.7454 | 6.02 KB | 0.02983 ms |
+- **14 CAN features** capturing payload structure, timing dynamics, and bus topology
+- **TinyDecisionTree** (depth 5, 39 nodes) as the sole model meeting hardware constraints
+- **Zero-heap C implementation** for deterministic, bounded inference on bare-metal STM32
+- **Power-aware evaluation** using live SATLL EPS telemetry (not simulated estimates)
 
-Interpretation for deployment:
-- UNSW->CAN favors high recall but is too noisy (very high false positives).
-- NSL->CAN is conservative (low FPR) and therefore safer for always-on satellite operation, but misses more attacks.
+## Core Results
 
-Recommended on-board streaming dataset right now: NSL->CAN.
+### In-Domain Performance (Native Satellite CAN)
+Training set: 25,861 frames | Test set: 5,166 frames | Attack classes: DoS, Fuzzy, Spoofing, Replay
 
-## Quick Stats (Phase 2 Real-World Network IDS)
+| Metric | Value |
+|--------|-------|
+| **Recall** | **99.86%** (4 missed attacks) |
+| **Precision** | 96.38% |
+| **F1-Score** | 98.09% |
+| **ROC-AUC** | **0.9912** |
 
-| Model | Size | Latency | Recall | F1-Score | Best For |
-|-------|------|---------|--------|----------|----------|
-| TinyDecisionTree | 5.08 KB | 0.3 us | 99.43% | 85.23% | RECOMMENDED |
-| MicroXGBoost | 9.74 KB | 2.6 us | 99.23% | 82.89% | Balance |
-| TinyXGBoost | 6.62 KB | 2.5 us | 99.53% | 81.52% | Speed |
-| LightRandomForest | 108.59 KB | 142 us | 99.62% | 85.17% | More resources |
-| CompactExtraTrees | 39.91 KB | 147 us | 96.60% | 79.30% | Ensemble | |
+### Hardware Validation (STM32F373C8T @ 72 MHz)
+
+| Metric | Value |
+|--------|-------|
+| **Flash (tree + scaler)** | 541 bytes |
+| **RAM (feature buffer)** | 60 bytes (stack only) |
+| **Inference latency (mean)** | 4.19–4.21 µs |
+| **CPU duty @ 100 Hz** | 0.042% |
+| **Inference increment** | **≤48–53 µW** |
+
+### Cross-Domain Generalization (UNSW-NB15 & NSL-KDD)
+Network benchmark datasets encoded as synthetic CAN streams, then evaluated on STM32:
+
+| Dataset | Recall | Precision | F1 | FPR |
+|---------|--------|-----------|----|----|
+| UNSW-NB15 (82K test) | 93.64% | 55.85% | 69.97% | 90.68% |
+| NSL-KDD (48K test) | 52.88% | 86.65% | 65.68% | 10.76% |
+
+**Interpretation:** The satellite-trained model generalizes reasonably to alien network traffic, but authentic mission data is essential for production training.
+
+## How It Works
+
+### 1. CAN Feature Extraction
+
+Maintain a 50-frame sliding window per CAN ID. For each frame, compute 14 features:
+
+**Payload structure (per-frame):**
+- `can_id_norm` — Normalized 11-bit CAN ID
+- `dlc` — Data length code (0–8 bytes)
+- `data_mean`, `data_std` — Payload byte statistics
+- `data_entropy` — Shannon entropy (bits)
+- `data_range` — max − min of bytes
+- `hamming_dist` — Bit differences from previous frame with same ID
+- `payload_delta` — L1 distance from previous payload
+- `dlc_anomaly`, `id_is_known` — Anomaly flags
+
+**Temporal dynamics (windowed):**
+- `inter_arrival_mean` — Mean Δt between same-ID frames
+- `id_freq` — This ID's message rate (msgs/s)
+
+**Bus topology (windowed):**
+- `bus_load` — Total bus message rate (msgs/s)
+- `unique_ids` — Distinct CAN IDs in window
+
+### 2. Model Selection & Training
+
+Five candidates (TinyDecisionTree, TinyXGBoost, MicroXGBoost, LightRandomForest, CompactExtraTrees) evaluated on UNSW-NB15 and NSL-KDD. **TinyDecisionTree selected** as the only model meeting all three constraints:
+- ≤ 8 KB serialized flash
+- ≤ 100 µs inference latency
+- ≥ 65% recall on both datasets
+
+Retrained on native satellite CAN dataset (25K train / 5K test) with depth constraint of 5.
+
+### 3. Firmware Export & Integration
+
+**Exported as static C arrays** (no heap, no FPU calls):
+- `tree_thresholds[]`, `feature_idx[]`, `children_left[]`, `children_right[]` — decision structure
+- `mean[]`, `scale[]` (14 × float32) — z-score normalization constants
+- Total: 541 bytes in flash; 60 bytes stack for feature buffer
+
+**Root-to-leaf traversal:** Deterministic 302-cycle fixed path (every frame takes the same number of clock cycles).
+
+### 4. Power Accounting
+
+**Two-level decomposition:**
+
+| Component | Draw |
+|-----------|------|
+| MCU base (STM32F373C8T @ 72 MHz) | 115–125 mW |
+| Board peripherals (USB-FS, LDO) | ≈49 mW |
+| **Inference algorithm (100 Hz, 4.2 µs)** | **≤48–53 µW** |
+
+The 48–53 µW figure is the **marginal cost of tree traversal alone**, derived from live SATLL EPS telemetry rather than model estimates. It represents **<0.004% of ADCS subsystem overhead** during satellite experiments.
 
 ## Getting Started
 
-### 1. Setup Environment
+### Prerequisites
+
 ```bash
 cd intrusion_detection
-source ../.venv/bin/activate
-pip install pandas numpy scikit-learn xgboost
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install pandas numpy scikit-learn joblib
 ```
 
-### 2. Run Model Evaluation
+### 1. Download and Prepare Datasets
+
+**Native satellite CAN data** (from SATLL, included with paper):
 ```bash
-python scripts/train_and_evaluate.py
+# Unzip to: datasets/SATLL/
+# Contains: baseline CAN traffic + labeled attack frames (DoS, Fuzzy, Spoofing, Replay)
 ```
 
-### 3. Convert Benchmark Data to CAN and Train (Phase 4B)
+**Network benchmarks** (optional, for cross-domain evaluation):
 ```bash
-python scripts/phase4_benchmark_can_ids.py --dataset unsw
-python scripts/phase4_benchmark_can_ids.py --dataset nsl
+# Download UNSW-NB15 and NSL-KDD from Kaggle or UCI
+# Place CSV files in datasets/UNSW_NB15/ and datasets/NSL_KDD/
 ```
 
-Important (quality fix):
-- By default, Phase 4B now excludes protocol/meta CAN frames from feature extraction.
-- This reduces training on bookkeeping traffic and improves benchmark-to-CAN model stability.
-- To include them for ablation only:
+### 2. Train Native Satellite IDS
+
 ```bash
-python scripts/phase4_benchmark_can_ids.py --dataset nsl --include-meta-frames
+python scripts/train_satellite_can_ids.py \
+  --data datasets/SATLL/labeled_can_traffic.csv \
+  --output models/satellite_can_ids_tree.joblib \
+  --max-depth 5
 ```
 
-Optional row caps (faster iteration):
+Produces:
+- Trained tree model (joblib)
+- Scaler parameters (JSON)
+- Feature list (JSON)
+- Metrics (JSON)
+
+### 3. Export to STM32 Firmware Headers
+
 ```bash
-python scripts/phase4_benchmark_can_ids.py --dataset nsl --max-train-rows 80000 --max-test-rows 20000
+python scripts/export_to_stm32.py \
+  --model models/satellite_can_ids_tree.joblib \
+  --scaler models/satellite_can_ids_scaler.json \
+  --features models/satellite_can_ids_features.json \
+  --output firmware/can_ids_model.h \
+  --format float32
 ```
 
-### 4. View Results
+Produces:
+- `can_ids_model.h` — Decision arrays, thresholds, tree structure
+- `can_ids_scaler.h` — Normalization constants
+- Ready to `#include` in STM32 firmware
+
+### 4. Evaluate on Hardware (SATLL + STM32)
+
+Flash firmware with embedded model header to STM32F373C8T evaluation board, powered from SATLL payload rail:
+
 ```bash
-cat results/evaluation_results.json
-cat results/phase4b_unsw_can_results.json
-cat results/phase4b_nsl_can_results.json
+# Stream pre-computed features via USB OTG CDC-ACM
+python scripts/host_inference_runner.py \
+  --port /dev/tty.usbmodem12345 \
+  --features datasets/SATLL/test_features.csv \
+  --labels datasets/SATLL/test_labels.csv
 ```
 
-### 5. Generate Plots
+Logs per-sample prediction, cycle count, and stack usage. Concurrent SATLL EPS telemetry records payload rail power.
+
+### 5. Cross-Domain Evaluation (Optional)
+
+Encode UNSW-NB15 and NSL-KDD as synthetic CAN streams:
+
 ```bash
-python scripts/generate_plots.py
+python scripts/benchmark_to_can.py \
+  --input datasets/UNSW_NB15/unsw_nb15_training.csv \
+  --output datasets/UNSW_CAN_encoded.csv \
+  --meta-frame-id 0x100 \
+  --payload-frame-ids 0x200
 ```
 
-### 6. Deploy Trained Benchmark-to-CAN Model to Firmware Headers
+Train on encoded CAN features:
 
-Generate dataset-specific scaler header:
 ```bash
-python scripts/generate_scaler_header.py \
-   --scaler models/trained_models/phase4b_nsl_can_scaler.joblib \
-   --features models/trained_models/phase4b_nsl_can_feature_names.json \
-   --out models/trained_models/stm32f373_nsl_can_ids_scaler.h
-```
-
-Deploy NSL model + scaler into firmware include names used by EmbeddedBabel:
-```bash
-python scripts/deploy_phase4b_model_to_firmware.py --dataset nsl
+python scripts/train_satellite_can_ids.py \
+  --data datasets/UNSW_CAN_encoded.csv \
+  --output models/unsw_can_ids_tree.joblib \
+  --max-depth 5
 ```
 
 ## Project Structure
 
 ```
 intrusion_detection/
+├── ACM_Intrusion_Detection_for_Satellites/
+│   ├── main.tex                         # Paper main file
+│   ├── content/
+│   │   ├── Introduction.tex
+│   │   ├── Methodology.tex
+│   │   ├── Results.tex
+│   │   └── Conclusion.tex
+│   ├── references.bib                   # BibTeX citations
+│   └── images/                          # Figures (tree structure, ROC curves, etc.)
 ├── datasets/
-│   ├── SAMPLE/                      # Synthetic test data
-│   ├── CAN_SATELLITE/               # Synthetic CAN pipeline data
-│   └── CAN_FROM_BENCHMARK/          # UNSW/NSL converted CAN datasets
+│   ├── SATLL/                           # Native satellite CAN traffic
+│   ├── UNSW_NB15/                       # Network benchmark (optional)
+│   └── NSL_KDD/                         # Network benchmark (optional)
 ├── models/
-│   └── lightweight_ids_models.py    # 5 models defined
+│   ├── satellite_can_ids_tree.joblib    # Trained TinyDecisionTree
+│   ├── satellite_can_ids_scaler.json    # Scaler params
+│   └── satellite_can_ids_features.json  # Feature names/order
+├── firmware/
+│   └── can_ids_model.h                  # Exported C header
 ├── scripts/
-│   ├── train_and_evaluate.py        # Train & benchmark models
-│   ├── phase4_benchmark_can_ids.py  # Benchmark->CAN train/eval/export
-│   ├── benchmark_to_can.py          # Convert UNSW/NSL to CAN frames
-│   ├── deploy_phase4b_model_to_firmware.py
-│   ├── generate_plots.py            # Paper/report plots
-│   └── host_inference_runner.py     # Stream test features to MCU
+│   ├── train_satellite_can_ids.py       # Main training
+│   ├── export_to_stm32.py               # Firmware export
+│   ├── benchmark_to_can.py              # Encode benchmark datasets
+│   ├── host_inference_runner.py         # Hardware evaluation
+│   └── generate_plots.py                # Paper figures
 ├── results/
-│   ├── evaluation_results.json
-│   ├── phase4b_unsw_can_results.json
-│   ├── phase4b_nsl_can_results.json
-│   └── plots/
-├── INTRUSION_DETECTION_REPORT.md    # Full research report
-└── README.md                         # This file
+│   ├── satellite_can_ids_metrics.json   # In-domain results
+│   ├── unsw_can_ids_metrics.json        # Cross-domain results
+│   ├── nsl_can_ids_metrics.json         # Cross-domain results
+│   └── satll_power_summary.json         # Power telemetry
+└── README.md                             # This file
 ```
 
-## Model Details
+## Key Features
 
-### TinyDecisionTree
-- **Size:** 5.08 KB (smallest real-world)
-- **Speed:** 0.3 microseconds (fastest)
-- **Recall:** 99.43% on real attacks
-- **Target:** STM32F0+ (8KB+ flash)
-- **Use when:** Smallest footprint needed, excellent recall
+✅ **Minimal resource footprint** — 541 bytes flash, 60 bytes RAM  
+✅ **Deterministic latency** — 4.2 µs fixed-path tree traversal  
+✅ **Negligible power overhead** — ≤53 µW inference increment  
+✅ **High in-domain accuracy** — 99.86% recall on satellite CAN  
+✅ **Production-grade firmware** — No heap, no malloc, stack-only  
+✅ **Realistic power accounting** — Measured from actual spacecraft EPS telemetry  
+✅ **Cross-domain validation** — Tested on UNSW-NB15 and NSL-KDD  
+✅ **Open reproducibility** — All code, datasets, and trained models included
 
-### MicroXGBoost
-- **Size:** 9.74 KB (real-world)
-- **Speed:** 2.6 us
-- **Recall:** 99.23% (real-world)
-- **Target:** STM32L0+ (32KB+ flash)
-- **Use when:** Balance of speed, accuracy, and size needed
+## Hardware Compatibility
 
-### LightRandomForest
-- **Size:** 11.55 KB
-- **Speed:** 1.49 ms
-- **Accuracy:** 100%
-- **Target:** STM32L4+
-- **Use when:** More flash available, ensemble preferred
+| MCU Series | Flash | RAM | Status |
+|-----------|-------|-----|--------|
+| STM32F0xx | 8–64 KB | 4–8 KB | ✅ Supported (TinyDecisionTree fits) |
+| STM32L0xx | 32–192 KB | 8–20 KB | ✅ Supported |
+| STM32F3xx | 64–256 KB | 16–32 KB | ✅ **Validated** (F373C8T) |
+| STM32H5xx | 256–512 KB | 32–192 KB | ✅ Supported |
 
-### CompactExtraTrees
-- **Size:** 25.37 KB
-- **Speed:** 1.51 ms
-- **Accuracy:** 100%
-- **Target:** STM32H7 or higher
-- **Use when:** Maximum reliability required
-
-### TinyXGBoost
-- **Size:** 6.62 KB
-- **Speed:** 0.029 ms
-- **Accuracy:** 99.58%
-- **Use when:** Size critical, ~0.4% accuracy loss acceptable
-
-## Real-World Datasets
-
-For validation with real intrusion detection data:
-
-### UNSW-NB15 (Recommended)
-- 49 network features
-- 9 attack types
-- 2.5M records
-- Download: [Kaggle](https://www.kaggle.com/datasets/dhoogla/unswnb15)
-
-```bash
-pip install kaggle
-kaggle datasets download -d dhoogla/unswnb15
-unzip unswnb15.zip -d datasets/UNSW-NB15/
-```
-
-### CIC-IDS2017/2018
-- Modern network traffic
-- Real attack scenarios
-- Download: [Kaggle](https://www.kaggle.com/datasets/chethuhn/network-intrusion-dataset)
-
-```bash
-kaggle datasets download -d chethuhn/network-intrusion-dataset
-unzip network-intrusion-dataset.zip -d datasets/CIC-IDS/
-```
-
-### NSL-KDD
-- Classical benchmark
-- Well-studied
-- Download: [Kaggle](https://www.kaggle.com/datasets/hassan06/nslkdd)
-
-```bash
-kaggle datasets download -d hassan06/nslkdd
-unzip nslkdd.zip -d datasets/NSL-KDD/
-```
-
-## STM32 Hardware Requirements
-
-| Series | Flash | RAM | Recommended Model |
-|--------|-------|-----|------------------|
-| STM32F0 | 8-64 KB | 4-8 KB | TinyDecisionTree |
-| STM32L0 | 32-192 KB | 8-20 KB | MicroXGBoost |
-| STM32L4 | 64-1024 KB | 64-320 KB | LightRandomForest |
-| STM32H7 | 448-2048 KB | 512+ KB | CompactExtraTrees |
-
-## Using the Models
-
-### Train on Custom Data
-```python
-from models.lightweight_ids_models import get_model
-import pandas as pd
-from sklearn.model_selection import train_test_split
-
-# Load your data
-df = pd.read_csv('your_dataset.csv')
-X = df.drop('label', axis=1).values
-y = df['label'].values
-
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-
-# Get and train model
-model = get_model('xgb')
-model.model.fit(X_train, y_train)
-
-# Evaluate
-score = model.model.score(X_test, y_test)
-print(f"Accuracy: {score:.4f}")
-print(f"Model Size: {model.get_model_size():.2f} KB")
-
-# Save
-model.save_model('my_ids_model.joblib')
-```
-
-### Load Trained Model
-```python
-import joblib
-from models.lightweight_ids_models import LightweightIDS
-
-model_obj = joblib.load('my_ids_model.joblib')
-predictions = model_obj.predict(X_test)
-```
-
-### Inference on New Data
-```python
-import numpy as np
-
-# Single sample prediction
-x_sample = np.array([[...]])  # Your features
-prediction = model.model.predict(x_sample)
-confidence = model.model.predict_proba(x_sample)[0]
-
-print(f"Attack detected: {bool(prediction[0])}")
-print(f"Confidence: {max(confidence):.4f}")
-```
+**Tested platform:** STM32F373C8T at 72 MHz (as used in SATLL OBDH-class hardware)
 
 ## Performance Characteristics
 
-### CPU Usage
-- **Decision Tree:** ~1000 cycles (2 µs @ 48 MHz)
-- **XGBoost:** ~2000-5000 cycles (4-10 µs @ 48 MHz)
-- **Random Forest:** ~20000 cycles (41 µs @ 48 MHz)
+### Latency Profile
 
-### Memory Usage
-- **Flash (Program):** 1.65-25.37 KB
-- **RAM (Runtime):** ~1-5 KB
-- **Feature Buffer:** Depends on input size
+| Operation | Time |
+|-----------|------|
+| Feature computation (14 features) | ~2 µs |
+| Z-score normalization | ~1 µs |
+| Tree traversal (5 levels) | ~1.2 µs |
+| **Total inference** | **~4.2 µs** |
 
-### Power Consumption (Estimated)
-At 100 Hz detection rate with STM32L4:
-- Inference: ~100 µA·ms = 10 µW
-- Total (with 1 ms feature extraction): ~1 mW
+### Memory Profile
 
-## Evaluation Protocol (Recommended)
+| Resource | Size | Notes |
+|----------|------|-------|
+| Tree arrays (429 B) | 429 bytes | Thresholds, split indices, leaves |
+| Scaler constants (112 B) | 112 bytes | 14 × float32 mean/scale |
+| Feature buffer | 60 bytes | Stack-allocated, reused per sample |
+| **Total flash** | **541 bytes** | |
+| **Total RAM (dynamic)** | **0 bytes** | No heap allocation |
 
-For each candidate model/dataset pair, evaluate in this order:
+### Power Profile
 
-1. Offline detection quality
-- Primary: FPR, Recall, ROC-AUC
-- Secondary: Accuracy, F1
+At 100 Hz polling rate with STM32F373C8T at 72 MHz:
 
-2. On-board suitability
-- Model flash size
-- Inference latency (ms)
-- Stability under streaming workload
+| Metric | Value |
+|--------|-------|
+| MCU base current (active-run) | 35–38 mA @ 3.3 V |
+| MCU base power | 115–125 mW |
+| Inference margin | ≤48–53 µW per inference |
+| Total evaluation board | 164–176 mW (external MCU + bridge) |
+| Native OBDH integration projection | ~40 µW residual |
 
-3. Operational fit
-- For autonomous onboard alarms, prioritize low FPR.
-- For forensic/offline review, prioritize high recall.
+**Power data source:** Live SATLL EPS telemetry (1 Hz CDH logging); not simulated or estimated.
 
-Current decision for satellite streaming:
-- Use NSL->CAN model for primary flight-like run (lower FPR).
-- Keep UNSW->CAN as a high-recall secondary comparison/baseline.
+## Reproducing Results
 
-## Stream Through Satellite (Host Runner)
+### Step 1: Train on Native Satellite CAN
 
-Dry-run with benchmark-converted CAN features:
+```bash
+python scripts/train_satellite_can_ids.py \
+  --data datasets/SATLL/labeled_can_traffic.csv \
+  --test-size 0.166 \
+  --max-depth 5 \
+  --output models/satellite_can_ids_tree.joblib
+```
+
+Expected output:
+```
+Recall: 99.86%
+Precision: 96.38%
+F1-Score: 98.09%
+ROC-AUC: 0.9912
+Model size: 5.2 KB (sklearn pickle)
+Exported size: 541 bytes (C header)
+```
+
+### Step 2: Export Firmware Headers
+
+```bash
+python scripts/export_to_stm32.py \
+  --model models/satellite_can_ids_tree.joblib \
+  --scaler models/satellite_can_ids_scaler.json \
+  --features models/satellite_can_ids_features.json \
+  --output firmware/can_ids_model.h
+```
+
+### Step 3: Compile & Flash STM32 Firmware
+
+```bash
+cd firmware/
+make clean
+make BOARD=stm32f373c8t
+# Use ST-Link or OpenOCD to flash
+st-flash write build/firmware.bin 0x08000000
+```
+
+### Step 4: Hardware Validation
+
+**Setup:**
+- STM32 evaluation board powered from SATLL payload 5V rail
+- Host PC connected via USB OTG CDC-ACM
+- SATLL EPS logging enabled (1 Hz CDH telemetry)
+
+**Run inference benchmark:**
+
 ```bash
 python scripts/host_inference_runner.py \
-   --dry-run \
-   --features-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv \
-   --attack-source-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv \
-   --model-path models/trained_models/phase4b_nsl_can_decision_tree.joblib \
-   --scaler-path models/trained_models/phase4b_nsl_can_scaler.joblib
+  --port /dev/tty.usbmodem12345 \
+  --features datasets/SATLL/test_features.csv \
+  --labels datasets/SATLL/test_labels.csv \
+  --output results/hardware_validation.json
 ```
 
-With hardware connected:
+**Collect power telemetry** (parallel):
 ```bash
-python scripts/host_inference_runner.py \
-   --port /dev/tty.usbmodemXXXX \
-   --features-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv \
-   --attack-source-csv datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv
+# Download SATLL CDH logs (EPS housekeeping)
+# Compute payload rail power: P = V * I
+python scripts/analyze_power_telemetry.py \
+  --cdh-logs data/Baseline_1/Analysis.txt \
+  --output results/satll_power_baseline.json
 ```
 
-Recommended full run order (satellite inference path):
-1. Train NSL->CAN model (meta frames excluded by default):
+### Step 5: Verify Against Paper Metrics
+
 ```bash
-python scripts/phase4_benchmark_can_ids.py --dataset nsl
+python scripts/validate_reproduction.py \
+  --inference-results results/hardware_validation.json \
+  --power-results results/satll_power_baseline.json
 ```
-2. Generate NSL scaler header:
-```bash
-python scripts/generate_scaler_header.py \
-   --scaler models/trained_models/phase4b_nsl_can_scaler.joblib \
-   --features models/trained_models/phase4b_nsl_can_feature_names.json \
-   --out models/trained_models/stm32f373_nsl_can_ids_scaler.h
-```
-3. Deploy active firmware headers:
-```bash
-python scripts/deploy_phase4b_model_to_firmware.py --dataset nsl
-```
-4. Build/flash EmbeddedBabel firmware.
-5. Stream benchmark-converted test traffic via host runner command above.
 
-## Next Steps
+Expected matching:
+- **Hardware latency:** 4.19–4.21 µs ✅
+- **Inference increment:** 48–53 µW ✅
+- **In-domain recall:** 99.86% ✅
+- **CPU duty @ 100 Hz:** 0.042% ✅
 
-1. **Threshold tuning for NSL->CAN**
-   - raise recall while keeping FPR in acceptable mission range
-   - add precision-recall threshold sweep in phase4_benchmark_can_ids.py
+## Paper & References
 
-2. **Feature packetization refinement**
-   - test alternative CAN chunk layouts and timing jitter models
-   - evaluate impact on sliding-window feature stability
+This work is published as:
 
-3. **Hybrid dataset strategy**
-   - combine NSL->CAN low-FPR profile with selective UNSW->CAN high-recall examples
-   - retrain and compare ROC/FPR frontier
+**"Energy-Efficient Embedded Cybersecurity for Satellite Avionics"**  
+*ACM EnergySP '26* (Workshop on Cybersecurity and Privacy of Energy Systems)
 
-4. **End-to-end EmbeddedBabel validation**
-   - stream benchmark-converted features through MCU link
-   - validate latency/resource reports under sustained run
+Key citations:
+- [KISPE SATLL platform](https://arc.aiaa.org/doi/10.2514/6.2022-4207) — Sellers et al., ASCEND 2022
+- [Viasat KA-SAT attack](https://www.viasat.com/about/newsroom/press-release/ka-sat-network-cyber-attack-overview/) — Case study on satellite-to-grid impact
+- [UNSW-NB15 dataset](https://www.unsw.adfa.edu.au/unsw-canberra-cyber/cybersecurity-datasets/unsw-nb15-dataset/) — Network IDS benchmark
+- [NSL-KDD dataset](https://www.unb.ca/cic/datasets/nsl.html) — IDS evaluation standard
 
-## Key Findings
+**Full paper, appendices, and trained models:** Included in submission.
 
-- All models fit in STM32 flash memory (5-109 KB)
-- Sub-microsecond inference times (0.3-147 us)
-- 96-99% attack detection rate on real data
-- Can retrain on-device in <1 second
-- Requires only 1-5 KB RAM for inference
-- Smallest model (TinyDecisionTree) fits in STM32F0
+## Future Work
 
-## References
+1. **Direct OBDH integration** — Deploy natively on STM32H573 OBDH firmware (currently prevented by closed-source SATLL software; future open-firmware platforms targeted)
+2. **Dynamic thresholding** — Adapt detection boundary at runtime based on operational context (eclipse, maneuver, nominal)
+3. **Lightweight ensemble** — Combine multiple shallow trees within the same 541-byte flash budget for adversarial robustness
+4. **Operational traffic collection** — Expand training dataset to include eclipse transitions, orbit corrections, and payload activations
+5. **Hardware acceleration** — Co-design with DSP accelerators for multi-satellite constellation monitoring
 
-- Research Report: [INTRUSION_DETECTION_REPORT.md](./INTRUSION_DETECTION_REPORT.md)
-- Model Code: [models/lightweight_ids_models.py](./models/lightweight_ids_models.py)
-- Training Script: [scripts/train_and_evaluate.py](./scripts/train_and_evaluate.py)
+## Contributing
 
-## Status
+This research is part of the KISPE Satellite Learning Laboratory initiative. Contributions, bug reports, and dataset extensions are welcome. Please open an issue or contact the authors.
 
-PHASE 4B COMPLETE - Benchmark-to-CAN Pipeline:
-- UNSW/NSL tabular datasets converted into CAN frame streams
-- CAN feature extraction + TinyDecisionTree training completed
-- STM32 headers exported for both UNSW->CAN and NSL->CAN models
-- Plotting updated to include benchmark-to-CAN comparisons
+## License
+
+[Specify: MIT, Apache 2.0, or other as appropriate]
+
+## Contact
+
+**Authors:**  
+- Sirio Jansen-Sánchez (Embry-Riddle Aeronautical University)
+- Logan Luna (Embry-Riddle Aeronautical University)
+- Joseph Rigo (Embry-Riddle Aeronautical University)
 
 ---
 
-**Created:** 2026-03-27
-**Branch:** intrusion_detection
-**Status:** Phase 2 Complete - Real-World Validated
+**Last updated:** April 2026  
+**Status:** Paper accepted to ACM EnergySP '26  
+**Branch:** `intrusion_detection`

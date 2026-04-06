@@ -1,0 +1,652 @@
+% ============================================================
+%  A Ground-Based Telemetry Analysis Pipeline for CubeSat
+%  Anomaly Detection with Synthetic Fault Injection
+%  IEEE Conference Paper — IEEEtran two-column format
+% ============================================================
+\documentclass[conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+% ── Title ────────────────────────────────────────────────────
+\title{A Ground-Based Telemetry Analysis Pipeline for CubeSat
+       Anomaly Detection with Synthetic Fault Injection}
+
+\author{
+  \IEEEauthorblockN{Logan Luna}
+  \IEEEauthorblockA{
+    \textit{KISPE Space Systems / University Collaboration}\\
+    loganluna@example.com
+  }
+}
+
+\begin{document}
+
+\maketitle
+
+% ── Abstract ─────────────────────────────────────────────────
+\begin{abstract}
+Reliable anomaly detection in spacecraft telemetry is essential for
+mission assurance, yet labelled fault datasets from real hardware
+tests remain scarce.  This paper presents a modular ground-based
+telemetry analysis pipeline developed for the KISPE Satellite
+Learning Laboratory~(SLL), a CubeSat-class hardware-in-the-loop
+platform.  The pipeline automates parsing of SCOTTI archive files,
+cleans and decodes binary telemetry fields, applies four complementary
+anomaly detectors — linear thermal trend analysis, z-score flagging,
+cross-channel correlation breakdown, and stuck-sensor detection —
+and generates up to twenty diagnostic plots per experiment session.
+Applied to nine completed subsystem test campaigns (totalling 3{,}340
+CDH and 3{,}392 ADCS telemetry packets), the pipeline consistently
+identifies a universal on-board data handling~(OBDH) thermal ramp of
+\SIrange{0.8}{2.0}{\celsius\per\minute} across all sessions, 21
+thermally-stuck sensor channels, and experiment-specific
+voltage-rail anomalies.  To support future machine-learning
+classifier development, a synthetic fault injection framework
+generates 16 labelled anomaly types — spanning thermal, power, ADCS,
+reaction wheel, and timing fault classes — producing 71 labelled CSV
+artefacts per experiment from real baseline telemetry.  The full
+pipeline, injector, and dataset are released openly alongside this
+paper.
+\end{abstract}
+
+\begin{IEEEkeywords}
+CubeSat, anomaly detection, telemetry analysis, fault injection,
+satellite health monitoring, ADCS, synthetic dataset generation
+\end{IEEEkeywords}
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+Spacecraft anomaly detection has traditionally relied on threshold
+monitors and expert-defined rules embedded in ground software.
+While effective for known, well-characterised faults, such approaches
+struggle to generalise to novel failure modes and require extensive
+manual configuration for each new mission.  The emergence of
+machine-learning~(ML) anomaly detection — in particular unsupervised
+and semi-supervised methods — offers a path toward more adaptive,
+data-driven fault identification~\cite{hundman2018detecting,
+kerner2020comparison}.  A fundamental bottleneck, however, is the
+availability of labelled fault datasets from real satellite hardware;
+most operational anomaly datasets are proprietary, sparsely
+labelled, or gathered only in simulation.
+
+The KISPE Satellite Learning Laboratory~(SLL) addresses this gap from
+the hardware perspective.  It is a laboratory-scale, CubeSat-derived
+platform that provides a fully integrated Command and Data Handling
+(CDH) and Attitude Determination and Control System~(ADCS) in a
+representative flight-like configuration, with real-time telemetry
+streamed via the SCOTTI ground interface.  In this work we exploit the
+SLL to conduct nine distinct subsystem test campaigns and to develop a
+complete software pipeline for:
+
+\begin{enumerate}
+  \item \textbf{Telemetry parsing} — ingesting both Analysis-format and
+        Debug-format SCOTTI archives, with automatic fallback;
+  \item \textbf{Data cleaning} — decoding signed/unsigned hex fields,
+        deduplicating packets, deriving elapsed time, and flagging
+        stuck sensor channels;
+  \item \textbf{Anomaly detection} — applying four complementary
+        statistical detectors that operate on CDH and ADCS streams;
+  \item \textbf{Visualisation} — generating up to 20 diagnostic plots
+        per session for exploratory analysis;
+  \item \textbf{Synthetic fault injection} — producing a labelled,
+        ML-ready dataset by injecting 16 fault types into the cleaned
+        real-world baseline telemetry.
+\end{enumerate}
+
+The contributions of this paper are:
+\begin{itemize}
+  \item A reproducible, open-source ground-test telemetry pipeline
+        for CubeSat-class hardware;
+  \item A characterisation of naturally occurring anomalies observed
+        across nine SLL test campaigns;
+  \item A systematic fault injection taxonomy and implementation
+        covering thermal, power, ADCS, wheel, and timing fault classes;
+  \item A labelled dataset of 71 CSV artefacts per experiment,
+        derived from real hardware telemetry, suitable for training and
+        evaluating anomaly detection models.
+\end{itemize}
+
+The remainder of the paper is structured as follows.
+Section~\ref{sec:background} reviews related work.
+Section~\ref{sec:platform} describes the SLL platform and telemetry
+format.
+Section~\ref{sec:pipeline} details the pipeline architecture.
+Section~\ref{sec:experiments} describes the test campaigns.
+Section~\ref{sec:results} presents detection results.
+Section~\ref{sec:injection} describes the synthetic fault injection
+framework.
+Section~\ref{sec:discussion} discusses findings and limitations, and
+Section~\ref{sec:conclusion} concludes.
+
+% ============================================================
+\section{Background and Related Work}
+\label{sec:background}
+% ============================================================
+
+\subsection{Spacecraft Anomaly Detection}
+
+Early spacecraft health monitoring relied on hard-coded limit checks
+applied to individual telemetry channels~\cite{iverson2008general}.
+Subsequent work introduced correlation-based monitors, which flag
+deviations in pairs of channels that are normally tightly
+coupled~\cite{srivastava2005discovering}.  Statistical process control
+methods, including Shewhart charts and exponentially weighted moving
+averages, have been applied to satellite voltage and temperature
+streams~\cite{susto2018multivariate}.
+
+\subsection{Machine Learning Approaches}
+
+Long Short-Term Memory~(LSTM) networks have shown particular promise
+for multivariate spacecraft telemetry anomaly detection, with the
+SMAP and MSL Mars rover datasets becoming de-facto
+benchmarks~\cite{hundman2018detecting}.  Telemanom and related
+prediction-error methods flag time steps where a trained sequence
+model cannot reconstruct the observed signal.  More recently,
+transformer-based architectures~\cite{xu2021anomaly} have been
+applied to satellite telemetry, though they demand larger labelled
+corpora than are typically available from single missions.
+
+\subsection{Synthetic Data and Fault Injection}
+
+The lack of labelled spacecraft fault data has motivated several
+synthetic generation strategies.  \cite{kerner2020comparison}
+benchmarked statistical and deep methods on simulated Mars rover
+data.  Fault injection at the software level — inserting error
+patterns directly into clean sensor streams — has been used in
+avionics and industrial process control to create balanced training
+sets~\cite{natschlaeger2010fault}.  To the authors' knowledge, no
+prior work has applied a systematic, multi-class fault injection
+framework to real CubeSat hardware telemetry at the subsystem
+test-campaign level.
+
+% ============================================================
+\section{Platform and Telemetry Format}
+\label{sec:platform}
+% ============================================================
+
+\subsection{KISPE Satellite Learning Laboratory}
+
+The KISPE SLL is a CubeSat-derived educational and research platform
+comprising an On-Board Computer~(OBC), an Electrical Power System~(EPS)
+with battery and solar simulation, a Communications module~(COMMS), and
+a full ADCS board hosting a 3-axis accelerometer, gyroscope,
+magnetometer, sun sensors, a reaction wheel, and magnetorquers.
+The platform generates two telemetry streams at approximately
+\SI{1}{\hertz}--\SI{2}{\hertz}:
+
+\begin{description}
+  \item[CDH packets] contain power rail voltages and currents
+        (SYS\_V, PLAT\_5V\_V, OBC\_PWR\_V, COMMS\_PWR\_V, \ldots),
+        nine board temperatures (TEMP\_SOLAR through TEMP\_PAYLOAD),
+        20 expansion thermistor channels, and housekeeping counters.
+  \item[ADCS Sensor packets] carry 3-axis inertial measurements
+        (ACCEL, GYRO, MAG), eight sun sensor channels, sun angle,
+        wheel speed, and magnetorquer commands.
+\end{description}
+
+\subsection{SCOTTI Archive Format}
+
+The SCOTTI ground interface writes telemetry to two file types per
+session:
+
+\textbf{Analysis files} contain full decoded fields in human-readable
+key-value format (\texttt{FIELD\_NAME = value}), one packet per
+timestamped block, with sub-millisecond timestamps.
+
+\textbf{Debug files} record raw hex payloads together with
+space-delimited ``Plot'' lines that carry all 87 CDH and 30 ADCS
+decoded values in fixed positional order.  Debug files use
+\texttt{MM/DD/YYYY} date formatting and \SI{1}{\second} timestamp
+precision, compared to the \texttt{DD/MM/YYYY} sub-millisecond format
+of Analysis files.  Experiments where the Analysis file was empty
+(Magnetorquer\_1, AttitudeDeterminationMagnetometer\_1,
+AttitudeDetermination\_Control, CameraTest\_1) were ingested via the
+Debug fallback.
+
+% ============================================================
+\section{Pipeline Architecture}
+\label{sec:pipeline}
+% ============================================================
+
+The pipeline is implemented in Python~3 using pandas, NumPy, SciPy,
+and Matplotlib, and is structured into five modules:
+\texttt{parser}, \texttt{cleaner}, \texttt{detector},
+\texttt{plotter}, and \texttt{injector}.
+Fig.~\ref{fig:pipeline} illustrates the data flow.
+
+\subsection{Parsing (\texttt{parser.py})}
+
+The parser applies a regular-expression state machine to scan
+sequential lines of an archive file.  For Analysis files, a
+timestamp-header regex identifies each packet boundary, and a
+tab-indented field regex extracts name-value pairs.  For Debug files,
+a single line regex matches Plot lines and maps the space-delimited
+tokens to 87 CDH or 30 ADCS field names using fixed positional
+schemas.  Hex strings that cannot be converted to float are preserved
+as strings for downstream handling.  The parser returns two
+\texttt{pd.DataFrame} objects (CDH and ADCS), sorted by timestamp.
+
+\subsection{Cleaning (\texttt{cleaner.py})}
+
+Cleaning applies several transformations:
+\begin{enumerate}
+  \item \textbf{Hex decoding}: unsigned-integer fields (current
+        readings) are converted via \texttt{int(str, 16)}; signed
+        16-bit fields (BATT\_CHR\_I, WHEEL\_SPEED, MAGNETORQUER\_*) use
+        two's-complement decoding.  Mixed string/float columns produced
+        by duplicate Debug sessions are handled by checking the input
+        type before attempting hex parsing.
+  \item \textbf{Deduplication}: rows with identical timestamps
+        (\texttt{keep=`last'}) are removed.  This eliminates the
+        duplicate sessions present in several Debug files.
+  \item \textbf{Elapsed time}: a scalar \texttt{elapsed\_s} column is
+        derived from the packet timestamp minus the session start.
+  \item \textbf{Power estimation}: estimated power in milliwatts is
+        computed for four supply rails (SYS, PLAT\_5V, OBC\_PWR,
+        COMMS\_PWR) from voltage $\times$ decoded current.
+  \item \textbf{Stuck thermistor detection}: any thermistor channel
+        with zero variance across all packets is labelled stuck.
+\end{enumerate}
+
+\subsection{Detection (\texttt{detector.py})}
+
+Four detectors are applied to each cleaned session:
+
+\textbf{D1 — Linear thermal trend.}  A least-squares line is fitted
+to TEMP\_OBDH and TEMP\_COMMS vs.\ elapsed time using
+\texttt{scipy.stats.linregress}.  The slope (°C/min), $R^2$, and
+total temperature rise $\Delta T$ are reported.
+
+\textbf{D2 — Z-score flagging.}  For each of seven CDH channels
+(TEMP\_OBDH, TEMP\_COMMS, TEMP\_SOLAR, SYS\_V, PLAT\_5V\_V,
+OBC\_PWR\_V, COMMS\_PWR\_V), samples with $|z| > 2.5\sigma$ are
+flagged, where $z$ is computed over all clean samples in the session.
+
+\textbf{D3 — Correlation breakdown.}  A rolling Pearson correlation
+($w = 30$ samples) is computed for four board-temperature pairs that
+are physically expected to track closely:
+(TEMP\_EPS, TEMP\_BATTERY),
+(TEMP\_EPS, TEMP\_BACKPLANE),
+(TEMP\_COMMS, TEMP\_PAYLOAD), and
+(TEMP\_ADCS, TEMP\_WHEEL).
+Windows where $|r| < 0.5$ are flagged as correlation breakdowns.
+
+\textbf{D4 — Stuck-channel detection.}  Any ADCS sensor channel with
+zero variance but a non-zero stuck value (excluding the all-zero
+baseline state) is identified as a frozen sensor.
+
+\subsection{Plotting (\texttt{plotter.py})}
+
+Up to 20 plots are generated per session.  Plots 01–15 target CDH
+data (board temperatures, OBDH ramp, power rails, thermistor
+anomaly, correlation matrices, voltage overlays, etc.).  Plots 16–20
+are conditional on live ADCS data and cover IMU 3-axis time-series,
+vector magnitudes, reaction wheel speed, sun sensor readings, and
+magnetorquer commands.
+
+% ============================================================
+\section{Experimental Campaigns}
+\label{sec:experiments}
+% ============================================================
+
+Nine test campaigns were conducted on the KISPE SLL between
+02 March and 22 March 2026, each lasting between approximately
+\SI{3}{\minute} and \SI{10}{\minute}.
+Table~\ref{tab:experiments} summarises the dataset.
+
+\begin{table}[t]
+\caption{SLL Test Campaign Overview}
+\label{tab:experiments}
+\centering
+\footnotesize
+\begin{tabular}{@{}llrrc@{}}
+\toprule
+\textbf{Experiment} & \textbf{Source} & \textbf{CDH} & \textbf{ADCS} & \textbf{ADCS Live} \\
+\midrule
+Baseline\_1                       & Analysis & 333  & 335  & No  \\
+Accelerometer\_1                  & Analysis & 360  & 363  & Yes \\
+Gyro\_1                           & Analysis & 267  & 264  & Yes \\
+ReactionWheel\_1                  & Analysis & 357  & 359  & Yes \\
+SunSensorTest\_1                  & Analysis & 361  & 361  & Yes \\
+Magnetorquer\_1                   & Debug    & 535  & 534  & Yes \\
+AttitudeDet.\ Magnetometer\_1     & Debug    & 285  & 285  & Yes \\
+AttitudeDetermination\_Control    & Debug    & 273  & 273  & Yes \\
+CameraTest\_1                     & Debug    & 545  & 546  & Yes \\
+\midrule
+\textbf{Total}                    &          & \textbf{3{,}316} & \textbf{3{,}280} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Baseline\_1 session was conducted with ADCS powered off as a
+control experiment.  Subsequent campaigns powered the full ADCS stack
+and exercised individual actuators and sensors in isolation.  The
+CameraTest\_1 and AttitudeDetermination sessions were the longest
+(approximately \SI{9}{\minute}) and were captured only in Debug
+format due to a logging configuration change on 22 March 2026.
+
+% ============================================================
+\section{Results}
+\label{sec:results}
+% ============================================================
+
+\subsection{Universal OBDH Thermal Ramp}
+
+The most prominent system-wide finding is a consistent linear rise in
+the OBDH board temperature across every experiment.
+Table~\ref{tab:obdh} reports the fitted slope, goodness-of-fit $R^2$,
+and total temperature delta for all nine sessions.
+
+\begin{table}[t]
+\caption{OBDH Thermal Ramp Characteristics per Session}
+\label{tab:obdh}
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Experiment} & \textbf{Slope} & $\boldsymbol{R^2}$ & $\boldsymbol{\Delta T}$ \\
+                    & (\si{\celsius\per\minute}) &  & (\si{\celsius}) \\
+\midrule
+Baseline\_1                    & 1.52 & 0.975 & 4.48 \\
+Accelerometer\_1               & 1.92 & 0.945 & 6.09 \\
+Gyro\_1                        & 2.04 & 0.948 & 4.85 \\
+ReactionWheel\_1               & 1.56 & 0.943 & 5.24 \\
+SunSensorTest\_1               & 1.26 & 0.944 & 4.24 \\
+Magnetorquer\_1                & 0.80 & 0.888 & 8.98 \\
+AttitudeDet.\ Magnetometer\_1  & 1.25 & 0.921 & 6.97 \\
+AttitudeDetermination\_Control & 1.18 & 0.933 & 6.06 \\
+CameraTest\_1                  & 1.06 & 0.956 & 10.66 \\
+\midrule
+\textbf{Mean $\pm$ SD} & $1.40 \pm 0.39$ & $0.939 \pm 0.024$ & $6.51 \pm 2.06$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All sessions exhibit $R^2 > 0.88$, confirming highly linear thermal
+behaviour.  The Gyro\_1 session shows the steepest rate
+(\SI{2.04}{\celsius\per\minute}), while Magnetorquer\_1 has the
+lowest slope but highest total $\Delta T$ (\SI{8.98}{\celsius}) owing
+to its longer duration.  CameraTest\_1 achieves a $\Delta T$ of
+\SI{10.66}{\celsius} — the largest observed — consistent with the
+payload being powered throughout the \SI{9}{\minute} session.
+
+This ramp is not an injected anomaly; it reflects steady-state power
+dissipation in the OBC in the absence of active thermal control, and
+serves as a reliable discriminant between operational and
+anomalous thermal states.
+
+\subsection{Stuck Thermistor Array}
+
+All experiments register 21 stuck thermistor channels: 16 rod
+thermistors frozen at \SI{77.18}{\celsius} and four bath/expansion
+thermistors frozen at \SI{74.31}{\celsius}, with the heater
+thermistor reading zero.  These values are characteristic of an
+unconnected or open-circuit ADC input at the conversion resolution
+of this firmware version, and represent a systemic sensor interface
+fault rather than a transient event.  CameraTest\_1 is the sole
+exception, with only one stuck channel, suggesting a firmware or
+cabling update between the March 12 and March 22 campaigns.
+
+\subsection{Voltage Rail Z-Score Anomalies}
+
+Table~\ref{tab:zscore} summarises the z-score anomaly counts for
+the four primary voltage rails.  SYS\_V and OBC\_PWR\_V show
+elevated flag counts in most sessions, reflecting sub-cycle
+transients on the battery-backed supply rail — a known
+characteristic of the SLL's charge-controller interaction at low
+solar input.  PLAT\_5V\_V anomalies are highest in the Gyro\_1 and
+ReactionWheel\_1 sessions, consistent with increased current demand
+from the ADCS peripherals.
+
+\begin{table}[t]
+\caption{Z-Score Anomaly Counts ($|z|>2.5$) for Key Channels}
+\label{tab:zscore}
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Experiment} & \textbf{SYS\_V} & \textbf{PLAT\_5V} & \textbf{OBC\_PWR} & \textbf{COMMS} \\
+\midrule
+Baseline\_1                    &  3 &  3 &  9 &  0 \\
+Accelerometer\_1               & 17 & 19 & 17 &  2 \\
+Gyro\_1                        & 18 & 24 &  3 & 19 \\
+ReactionWheel\_1               &  7 & 20 & 14 & 23 \\
+SunSensorTest\_1               &  6 &  3 &  2 &  4 \\
+Magnetorquer\_1                & 16 &  9 & 17 &  2 \\
+AttitudeDet.\ Magnetometer\_1  & 21 & 13 &  5 &  9 \\
+AttitudeDetermination\_Control & 12 &  0 &  3 &  0 \\
+CameraTest\_1                  &  3 &  0 &  0 &  0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{ADCS Sensor State}
+
+The Baseline\_1 session shows all nine IMU channels
+(ACCEL\_X/Y/Z, GYRO\_X/Y/Z, MAG\_X/Y/Z) identically zero,
+confirming that the ADCS board was unpowered.  All subsequent
+sessions show live ADCS data.  Two frozen-sensor findings are
+notable:
+
+\begin{itemize}
+  \item \textbf{SUN\_ANGLE frozen at 0x013C~(316)} — detected in the
+        Accelerometer\_1 and Magnetorquer\_1 sessions.  The sun angle
+        derivation algorithm was likely not re-initialised between the
+        two sessions, causing the output register to hold the last
+        computed value.
+  \item \textbf{WHEEL\_SPEED frozen near zero} — observed in Gyro\_1.
+        The reaction wheel was not commanded during this session and
+        the speed register did not update, indicating a firmware
+        reporting oversight rather than a mechanical fault.
+\end{itemize}
+
+\subsection{Temperature Correlation Breakdown}
+
+The rolling-correlation detector flags the
+(TEMP\_EPS, TEMP\_BACKPLANE), (TEMP\_COMMS, TEMP\_PAYLOAD), and
+(TEMP\_ADCS, TEMP\_WHEEL) pairs in all nine sessions.  This pattern
+is consistent across experiments, suggesting that these pairs are
+not, in fact, tightly correlated on the SLL time-scale of a few
+minutes — the boards heat at slightly different rates due to their
+varying power dissipation.  This is a useful baseline characterisation:
+a true thermal decoupling anomaly (e.g.\ a heater failure) would need
+to be distinguished from this normal intra-session decorrelation.
+
+\subsection{Packet Timing}
+
+Sessions parsed from Analysis files exhibit a mean CDH inter-packet
+interval of $\approx \SI{0.50}{\second}$ with a standard deviation of
+$\approx \SI{0.14}{\second}$, reflecting the 2 Hz nominal telemetry
+cadence.  Debug-format sessions show exactly $\SI{1.00}{\second}$
+intervals with zero standard deviation, an artefact of the Debug
+format's integer-second timestamp resolution.  No pathological packet
+gaps exceeding \SI{2}{\second} were observed.
+
+% ============================================================
+\section{Synthetic Fault Injection}
+\label{sec:injection}
+% ============================================================
+
+\subsection{Motivation and Design Principles}
+
+Real spacecraft fault datasets are intrinsically imbalanced: nominal
+operation dominates, and most fault types have very few or zero
+observed instances.  To address this for ML classifier training, we
+develop a fault injection framework operating directly on the cleaned
+real-world telemetry.  This preserves the realistic noise
+characteristics, sensor correlations, and thermal drift of the actual
+hardware while adding controlled, labelled perturbations.
+
+Each injection function is a pure function of its input
+\texttt{pd.DataFrame}, returning a modified copy alongside a label
+record containing the anomaly type, start/end row indices, severity
+(\textit{low}/\textit{medium}/\textit{high}), and affected channel
+names.  All random decisions use a seeded \texttt{numpy.Generator},
+making every injection fully reproducible.
+
+\subsection{Injection Taxonomy}
+
+Table~\ref{tab:injections} lists the 16 implemented injection types
+across five fault classes.
+
+\begin{table}[t]
+\caption{Synthetic Fault Injection Taxonomy}
+\label{tab:injections}
+\centering
+\footnotesize
+\begin{tabular}{@{}llp{4.2cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Name} & \textbf{Description} \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Thermal (CDH)}} \\
+T1 & OBDH ramp accel.      & Accelerate OBDH slope by $\times$4 from a mid-session split \\
+T2 & Board step change      & Step $\delta$T on a board temp with exponential decay ($\tau=30$ samples) \\
+T3 & Board divergence       & Grow a linear bias between two normally-correlated boards \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Power (CDH)}} \\
+P1 & SYS\_V sag             & Gaussian-shaped battery sag; co-dips BATT\_CHR\_V \\
+P2 & OBC voltage spikes     & 8 random-sign spikes in a 20-sample OBC\_PWR\_V window \\
+P3 & Rail stuck high        & Force ADCS\_5V\_V to 3.3 V from a random mid-session row \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{ADCS (ADCS stream)}} \\
+A1 & Accel axis dropout     & Zero ACCEL axes for a contiguous window \\
+A2 & Gyro saturation        & Peg a gyro axis at its observed maximum \\
+A3 & Magnetometer flip      & Invert all MAG axes for a short burst \\
+A4 & IMU all-zero dropout   & Zero all 9 IMU channels for 25\% of session \\
+A5 & Sun sensor saturation  & Set all SUN\_SENSOR channels to 1023 \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Wheel (ADCS stream)}} \\
+W1 & Wheel overspeed        & Linearly ramp WHEEL\_SPEED to $\pm$1800 counts \\
+W2 & Wheel sudden stop      & Zero WHEEL\_SPEED one sample after peak \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Timing (CDH)}} \\
+C1 & Packet gap             & Remove rows totalling 10 s from mid-session \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Compound}} \\
+CP1 & Thermal + power fault & T1 + P1 applied simultaneously \\
+CP2 & ADCS + power fault    & A4 on ADCS + P3 on CDH simultaneously \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Dataset Statistics}
+
+For each of the nine processed experiments, two variants of each
+injection type are generated using different random seeds, yielding
+$16 \times 2 = 32$ injected data files and 32 corresponding label
+CSVs per experiment.  Additionally, two clean evaluation copies
+(with \texttt{anomaly=False} labels) and one \texttt{injection\_summary.csv}
+are written, bringing the total to 71 artefacts per experiment and
+$71 \times 9 = 639$ artefacts across the full campaign dataset.
+Each label record encodes the anomaly type, affected channels,
+severity level, and exact row span, providing rich supervision signal
+for both binary and multi-class fault classifiers.
+
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+% ============================================================
+
+\subsection{Key Findings}
+
+The universal OBDH thermal ramp (mean
+\SI{1.40}{\celsius\per\minute}, $R^2 > 0.88$ in all sessions) is the
+dominant feature of SLL telemetry and can serve as a reliable
+normality baseline: any session that does not exhibit this trend would
+be immediately anomalous.  The distinct rates across experiments
+(\SIrange{0.80}{2.04}{\celsius\per\minute}) suggest that subsystem
+power draw significantly modulates the ramp slope, with the gyro test
+showing the steepest rise due to the sustained ADCS peripheral load.
+
+The 21 stuck thermistors in 8 of 9 sessions indicate an unresolved
+hardware or firmware issue with the expansion thermistor interface on
+the March 12 hardware configuration.  The fact that CameraTest\_1
+(22 March) shows only one stuck channel suggests the fault was
+partially corrected between campaigns.  These channels are flagged
+deterministically and excluded from statistical analyses.
+
+The voltage rail anomalies (Table~\ref{tab:zscore}) appear correlated
+with ADCS peripheral load rather than representing true power faults.
+This contextual dependency is an important consideration for ML
+classifier design: a model trained on Baseline\_1 (low z-score counts)
+may over-flag normal ADCS-on behaviour in subsequent sessions.  The
+synthetic injection dataset mitigates this by generating fault
+examples from the relevant baseline sessions.
+
+\subsection{Limitations}
+
+Several limitations constrain the scope of the current study:
+
+\begin{enumerate}
+  \item \textbf{Session duration}: all sessions are 3–10 minutes,
+        limiting the ability to characterise slow-drift anomalies
+        that manifest over longer timescales.
+  \item \textbf{Missing ThermalTest\_1}: both files for this session
+        are empty (\SI{1}{line}), representing a logging capture
+        failure.  Re-running the session is recommended.
+  \item \textbf{Debug timestamp resolution}: second-level timestamps
+        in Debug files preclude packet-level timing analysis and
+        result in $\sim$50\% row loss after deduplication for some
+        sessions.
+  \item \textbf{Injector realism}: synthetic injections are applied
+        as mathematical transformations and do not account for
+        secondary physical effects (e.g.\ a power sag would also
+        affect downstream temperature trajectories).  Higher-fidelity
+        injection would require a coupled physics model.
+\end{enumerate}
+
+\subsection{Future Work}
+
+Immediate next steps include: (i) training and evaluating LSTM and
+Isolation Forest classifiers on the labelled injection dataset;
+(ii) extending session durations to 30–60 minutes to capture thermal
+equilibrium behaviour; (iii) implementing a higher-resolution Debug
+file parser that disambiguates sub-second packets using the firmware
+SECOND counter field; and (iv) adding a detection module for
+magnetorquer / reaction wheel coupling anomalies using the
+wheel--gyro rolling correlation already computed by the pipeline.
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+This paper presented a complete telemetry analysis pipeline for the
+KISPE Satellite Learning Laboratory, applied to nine subsystem test
+campaigns.  The pipeline ingests both Analysis and Debug SCOTTI archive
+formats, applies four complementary anomaly detectors, and generates
+rich diagnostic visualisations — all fully automated.  Key empirical
+findings include a universal OBDH thermal ramp of
+\SI{1.40}{\celsius\per\minute} on average, a systemic 21-channel
+thermistor interface fault, experiment-dependent voltage transients
+correlated with ADCS peripheral loading, and two frozen ADCS sensor
+registers.  To support data-driven fault detection research, a
+16-class synthetic fault injector produces 639 labelled telemetry
+artefacts across all campaigns from real hardware baseline data.
+The pipeline and dataset are made openly available.
+
+% ── Bibliography ─────────────────────────────────────────────
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

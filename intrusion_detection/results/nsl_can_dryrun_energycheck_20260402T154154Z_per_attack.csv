@@ -1,9 +1,0 @@
-attack_type,recall,fpr,n_attacks
-apache2,0.8571,0.2078,7
-guess_passwd,0.1429,0.2078,7
-mailbomb,0.5714,0.2078,7
-mscan,0.2857,0.2078,7
-neptune,0.4762,0.2078,63
-saint,0.4286,0.2078,7
-smurf,0.3889,0.2078,18
-warezmaster,0.7143,0.2078,7

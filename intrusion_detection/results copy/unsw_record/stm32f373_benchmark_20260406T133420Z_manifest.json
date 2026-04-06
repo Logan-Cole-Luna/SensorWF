@@ -1,0 +1,9 @@
+{
+  "run_id": "20260406T133420Z",
+  "files": {
+    "raw_csv": "results/stm32f373_benchmark_20260406T133420Z_raw.csv",
+    "report_json": "results/stm32f373_benchmark_20260406T133420Z_report.json",
+    "report_txt": "results/stm32f373_benchmark_20260406T133420Z_report.txt",
+    "per_attack_csv": "results/stm32f373_benchmark_20260406T133420Z_per_attack.csv"
+  }
+}

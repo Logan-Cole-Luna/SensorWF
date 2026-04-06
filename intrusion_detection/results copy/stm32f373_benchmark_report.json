@@ -1,0 +1,235 @@
+{
+  "hardware": {
+    "mcu": "STM32F373C8T",
+    "hclk_hz": 72000000,
+    "vdd_v": 3.3,
+    "active_run_current_a": 0.027
+  },
+  "model": {
+    "name": "TinyDecisionTree (CAN)",
+    "n_features": 15,
+    "feature_names": [
+      "can_id_norm",
+      "dlc",
+      "data_mean",
+      "data_std",
+      "data_entropy",
+      "data_range",
+      "hamming_dist",
+      "inter_arrival_mean",
+      "inter_arrival_std",
+      "id_freq",
+      "bus_load",
+      "unique_ids",
+      "dlc_anomaly",
+      "id_is_known",
+      "payload_delta"
+    ],
+    "tree_nodes": 39,
+    "tree_depth": 5,
+    "flash_bytes": 549,
+    "flash_kb": 0.536
+  },
+  "performance": {
+    "n_samples": 48000,
+    "accuracy": 0.6854,
+    "precision": 0.8665,
+    "recall": 0.5287,
+    "f1": 0.6567,
+    "fpr": 0.1076,
+    "tp": 14444,
+    "tn": 18456,
+    "fp": 2226,
+    "fn": 12874,
+    "per_attack_type": {
+      "apache2": {
+        "recall": 0.3441,
+        "fpr": 0.3362,
+        "n_attacks": 1575
+      },
+      "back": {
+        "recall": 0.3504,
+        "fpr": 0.3362,
+        "n_attacks": 819
+      },
+      "buffer_overflow": {
+        "recall": 0.5238,
+        "fpr": 0.3362,
+        "n_attacks": 21
+      },
+      "guess_passwd": {
+        "recall": 0.3676,
+        "fpr": 0.3362,
+        "n_attacks": 2688
+      },
+      "httptunnel": {
+        "recall": 0.3111,
+        "fpr": 0.3362,
+        "n_attacks": 315
+      },
+      "ipsweep": {
+        "recall": 0.3799,
+        "fpr": 0.3362,
+        "n_attacks": 329
+      },
+      "land": {
+        "recall": 0.2857,
+        "fpr": 0.3362,
+        "n_attacks": 21
+      },
+      "mailbomb": {
+        "recall": 0.4521,
+        "fpr": 0.3362,
+        "n_attacks": 595
+      },
+      "mscan": {
+        "recall": 0.3532,
+        "fpr": 0.3362,
+        "n_attacks": 2163
+      },
+      "multihop": {
+        "recall": 0.2619,
+        "fpr": 0.3362,
+        "n_attacks": 42
+      },
+      "named": {
+        "recall": 0.25,
+        "fpr": 0.3362,
+        "n_attacks": 28
+      },
+      "neptune": {
+        "recall": 0.3524,
+        "fpr": 0.3362,
+        "n_attacks": 9821
+      },
+      "nmap": {
+        "recall": 0.2484,
+        "fpr": 0.3362,
+        "n_attacks": 161
+      },
+      "phf": {
+        "recall": 0.2857,
+        "fpr": 0.3362,
+        "n_attacks": 7
+      },
+      "pod": {
+        "recall": 0.419,
+        "fpr": 0.3362,
+        "n_attacks": 105
+      },
+      "portsweep": {
+        "recall": 0.3531,
+        "fpr": 0.3362,
+        "n_attacks": 371
+      },
+      "processtable": {
+        "recall": 0.3653,
+        "fpr": 0.3362,
+        "n_attacks": 1407
+      },
+      "ps": {
+        "recall": 0.3673,
+        "fpr": 0.3362,
+        "n_attacks": 49
+      },
+      "rootkit": {
+        "recall": 0.5476,
+        "fpr": 0.3362,
+        "n_attacks": 42
+      },
+      "saint": {
+        "recall": 0.3564,
+        "fpr": 0.3362,
+        "n_attacks": 693
+      },
+      "satan": {
+        "recall": 0.3216,
+        "fpr": 0.3362,
+        "n_attacks": 1393
+      },
+      "sendmail": {
+        "recall": 0.0952,
+        "fpr": 0.3362,
+        "n_attacks": 21
+      },
+      "smurf": {
+        "recall": 0.3595,
+        "fpr": 0.3362,
+        "n_attacks": 1505
+      },
+      "snmpgetattack": {
+        "recall": 0.372,
+        "fpr": 0.3362,
+        "n_attacks": 371
+      },
+      "snmpguess": {
+        "recall": 0.328,
+        "fpr": 0.3362,
+        "n_attacks": 567
+      },
+      "teardrop": {
+        "recall": 0.2,
+        "fpr": 0.3362,
+        "n_attacks": 35
+      },
+      "udpstorm": {
+        "recall": 0.8571,
+        "fpr": 0.3362,
+        "n_attacks": 7
+      },
+      "warezmaster": {
+        "recall": 0.3745,
+        "fpr": 0.3362,
+        "n_attacks": 2024
+      },
+      "xlock": {
+        "recall": 0.5714,
+        "fpr": 0.3362,
+        "n_attacks": 14
+      },
+      "xsnoop": {
+        "recall": 0.0952,
+        "fpr": 0.3362,
+        "n_attacks": 21
+      },
+      "xterm": {
+        "recall": 0.0714,
+        "fpr": 0.3362,
+        "n_attacks": 14
+      }
+    }
+  },
+  "timing": {
+    "cycles_min": 78,
+    "cycles_max": 148,
+    "cycles_mean": 114.47,
+    "inf_us_min": 1.0833,
+    "inf_us_max": 2.0556,
+    "inf_us_mean": 1.5899,
+    "inf_us_std": 0.1113,
+    "inf_us_p95": 1.7778,
+    "inf_us_p99": 1.8472
+  },
+  "resource_usage": {
+    "stack_used_bytes_min": 64,
+    "stack_used_bytes_max": 64,
+    "stack_canary_budget": 1024,
+    "stack_headroom_bytes": 960,
+    "flash_bytes_tree": 429,
+    "flash_bytes_scaler": 120,
+    "flash_bytes_total": 549,
+    "ram_bytes_features": 60,
+    "note": "bare-metal, no heap (no dynamic allocation)"
+  },
+  "energy": {
+    "method": "whole_chip_active_run_current \u00d7 inference_duration",
+    "note": "Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.",
+    "whole_chip_energy_per_inf_nj": 141.6604,
+    "ids_duty_fraction_at_100hz": 0.000159,
+    "energy_per_inf_nj_estimate": 0.022523,
+    "energy_per_inf_pj_estimate": 22.5226,
+    "power_overhead_uw_at_100hz": 0.0023
+  },
+  "host_stream_time_s": 3.512,
+  "firmware_summary_match": true
+}

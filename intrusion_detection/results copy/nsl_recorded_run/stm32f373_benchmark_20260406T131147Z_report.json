@@ -1,0 +1,267 @@
+{
+  "hardware": {
+    "mcu": "STM32F373C8T",
+    "hclk_hz": 72000000,
+    "vdd_v": 3.3,
+    "active_run_current_a": 0.027
+  },
+  "model": {
+    "name": "TinyDecisionTree (CAN)",
+    "n_features": 15,
+    "feature_names": [
+      "can_id_norm",
+      "dlc",
+      "data_mean",
+      "data_std",
+      "data_entropy",
+      "data_range",
+      "hamming_dist",
+      "inter_arrival_mean",
+      "inter_arrival_std",
+      "id_freq",
+      "bus_load",
+      "unique_ids",
+      "dlc_anomaly",
+      "id_is_known",
+      "payload_delta"
+    ],
+    "tree_nodes": 39,
+    "tree_depth": 5,
+    "flash_bytes": 541,
+    "flash_kb": 0.528
+  },
+  "performance": {
+    "n_samples": 48000,
+    "accuracy": 0.6855,
+    "precision": 0.8665,
+    "recall": 0.5288,
+    "f1": 0.6568,
+    "fpr": 0.1076,
+    "tp": 14446,
+    "tn": 18456,
+    "fp": 2226,
+    "fn": 12872,
+    "per_attack_type": {
+      "apache2": {
+        "recall": 0.3441,
+        "fpr": 0.3363,
+        "n_attacks": 1575
+      },
+      "back": {
+        "recall": 0.3504,
+        "fpr": 0.3363,
+        "n_attacks": 819
+      },
+      "buffer_overflow": {
+        "recall": 0.5238,
+        "fpr": 0.3363,
+        "n_attacks": 21
+      },
+      "guess_passwd": {
+        "recall": 0.3676,
+        "fpr": 0.3363,
+        "n_attacks": 2688
+      },
+      "httptunnel": {
+        "recall": 0.3111,
+        "fpr": 0.3363,
+        "n_attacks": 315
+      },
+      "ipsweep": {
+        "recall": 0.3799,
+        "fpr": 0.3363,
+        "n_attacks": 329
+      },
+      "land": {
+        "recall": 0.2857,
+        "fpr": 0.3363,
+        "n_attacks": 21
+      },
+      "mailbomb": {
+        "recall": 0.4521,
+        "fpr": 0.3363,
+        "n_attacks": 595
+      },
+      "mscan": {
+        "recall": 0.3532,
+        "fpr": 0.3363,
+        "n_attacks": 2163
+      },
+      "multihop": {
+        "recall": 0.2619,
+        "fpr": 0.3363,
+        "n_attacks": 42
+      },
+      "named": {
+        "recall": 0.25,
+        "fpr": 0.3363,
+        "n_attacks": 28
+      },
+      "neptune": {
+        "recall": 0.3524,
+        "fpr": 0.3363,
+        "n_attacks": 9821
+      },
+      "nmap": {
+        "recall": 0.2484,
+        "fpr": 0.3363,
+        "n_attacks": 161
+      },
+      "phf": {
+        "recall": 0.2857,
+        "fpr": 0.3363,
+        "n_attacks": 7
+      },
+      "pod": {
+        "recall": 0.419,
+        "fpr": 0.3363,
+        "n_attacks": 105
+      },
+      "portsweep": {
+        "recall": 0.3531,
+        "fpr": 0.3363,
+        "n_attacks": 371
+      },
+      "processtable": {
+        "recall": 0.3653,
+        "fpr": 0.3363,
+        "n_attacks": 1407
+      },
+      "ps": {
+        "recall": 0.3673,
+        "fpr": 0.3363,
+        "n_attacks": 49
+      },
+      "rootkit": {
+        "recall": 0.5476,
+        "fpr": 0.3363,
+        "n_attacks": 42
+      },
+      "saint": {
+        "recall": 0.3564,
+        "fpr": 0.3363,
+        "n_attacks": 693
+      },
+      "satan": {
+        "recall": 0.3216,
+        "fpr": 0.3363,
+        "n_attacks": 1393
+      },
+      "sendmail": {
+        "recall": 0.0952,
+        "fpr": 0.3363,
+        "n_attacks": 21
+      },
+      "smurf": {
+        "recall": 0.3601,
+        "fpr": 0.3363,
+        "n_attacks": 1505
+      },
+      "snmpgetattack": {
+        "recall": 0.372,
+        "fpr": 0.3363,
+        "n_attacks": 371
+      },
+      "snmpguess": {
+        "recall": 0.328,
+        "fpr": 0.3363,
+        "n_attacks": 567
+      },
+      "teardrop": {
+        "recall": 0.2,
+        "fpr": 0.3363,
+        "n_attacks": 35
+      },
+      "udpstorm": {
+        "recall": 0.8571,
+        "fpr": 0.3363,
+        "n_attacks": 7
+      },
+      "warezmaster": {
+        "recall": 0.3745,
+        "fpr": 0.3363,
+        "n_attacks": 2024
+      },
+      "xlock": {
+        "recall": 0.5714,
+        "fpr": 0.3363,
+        "n_attacks": 14
+      },
+      "xsnoop": {
+        "recall": 0.0952,
+        "fpr": 0.3363,
+        "n_attacks": 21
+      },
+      "xterm": {
+        "recall": 0.0714,
+        "fpr": 0.3363,
+        "n_attacks": 14
+      }
+    }
+  },
+  "timing": {
+    "cycles_min": 301,
+    "cycles_max": 306,
+    "cycles_mean": 302.87,
+    "inf_us_min": 4.1806,
+    "inf_us_max": 4.25,
+    "inf_us_mean": 4.2065,
+    "inf_us_std": 0.0133,
+    "inf_us_p95": 4.2361,
+    "inf_us_p99": 4.2361
+  },
+  "resource_usage": {
+    "stack_used_bytes_min": 0,
+    "stack_used_bytes_max": 0,
+    "stack_canary_budget": 1024,
+    "stack_headroom_bytes": 1024,
+    "flash_bytes_tree": 429,
+    "flash_bytes_scaler": 112,
+    "flash_bytes_total": 541,
+    "ram_bytes_features": 60,
+    "note": "bare-metal, no heap (no dynamic allocation)"
+  },
+  "energy": {
+    "method": "whole_chip_active_run_current \u00d7 inference_duration",
+    "note": "Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.",
+    "whole_chip_energy_per_inf_nj": 373.725,
+    "ids_duty_fraction_at_100hz": 0.000421,
+    "energy_per_inf_nj_estimate": 0.157659,
+    "energy_per_inf_pj_estimate": 157.6587,
+    "power_overhead_uw_at_100hz": 0.0158,
+    "total_run_energy_nj_whole_chip": 17990324.55,
+    "total_run_energy_uj_whole_chip": 17990.32455,
+    "total_run_energy_nj_ids_estimate": 7567.615446,
+    "total_run_energy_pj_ids_estimate": 7567615.4465,
+    "energy_per_class": {
+      "normal": {
+        "n_samples": 20682,
+        "whole_chip_energy_total_nj": 7750935.225,
+        "whole_chip_energy_per_inf_nj": 374.7672,
+        "ids_energy_total_nj_estimate": 3260.424623,
+        "ids_energy_per_inf_nj_estimate": 0.157646
+      },
+      "attack": {
+        "n_samples": 27318,
+        "whole_chip_energy_total_nj": 10239389.325,
+        "whole_chip_energy_per_inf_nj": 374.822071,
+        "ids_energy_total_nj_estimate": 4307.190824,
+        "ids_energy_per_inf_nj_estimate": 0.157669
+      }
+    }
+  },
+  "host_stream_time_s": 108.132,
+  "firmware_summary_match": true,
+  "run": {
+    "run_id": "20260406T131147Z",
+    "timestamp_utc": "2026-04-06T13:13:37.605992+00:00",
+    "dry_run": false,
+    "port": "/dev/ttyACM0",
+    "features_csv": "datasets/CAN_FROM_BENCHMARK/nsl_can_test_features.csv",
+    "attack_source_csv": "datasets/CAN_FROM_BENCHMARK/nsl_can_test.csv",
+    "model_path": "models/trained_models/phase4b_nsl_can_decision_tree.joblib",
+    "scaler_path": "models/trained_models/phase4b_nsl_can_scaler.joblib",
+    "output_dir": "results",
+    "output_prefix": "stm32f373_benchmark"
+  }
+}

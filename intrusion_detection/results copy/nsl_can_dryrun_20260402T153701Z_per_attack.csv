@@ -1,0 +1,16 @@
+attack_type,recall,fpr,n_attacks
+apache2,0.4286,0.3398,21
+back,0.4286,0.3398,21
+guess_passwd,0.2222,0.3398,63
+httptunnel,0.5714,0.3398,7
+mailbomb,0.2857,0.3398,21
+mscan,0.2653,0.3398,49
+neptune,0.3363,0.3398,223
+processtable,0.4286,0.3398,21
+saint,0.4286,0.3398,7
+satan,0.0,0.3398,7
+smurf,0.3333,0.3398,42
+snmpgetattack,0.2857,0.3398,7
+snmpguess,0.2857,0.3398,7
+warezmaster,0.4286,0.3398,35
+xsnoop,0.0,0.3398,7

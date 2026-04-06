@@ -1,0 +1,76 @@
+{
+  "run_label": "UNSW-NB15 CAN-encoded, STM32F373C8T recorded run",
+  "date": "2026-04-06",
+  "stm32_benchmark": {
+    "dataset": "UNSW-NB15 (CAN-encoded, 300,000 frames)",
+    "ml_performance": {
+      "accuracy": 0.5575,
+      "precision": 0.5585,
+      "recall": 0.9364,
+      "f1": 0.6997,
+      "fpr": 0.9068,
+      "tp": 154678,
+      "tn": 12567,
+      "fp": 122253,
+      "fn": 10502
+    },
+    "timing": {
+      "cycles_min": 299,
+      "cycles_mean": 301.7,
+      "cycles_max": 305,
+      "inf_us_min": 4.1528,
+      "inf_us_mean": 4.1901,
+      "inf_us_max": 4.2361,
+      "inf_us_p95": 4.2222,
+      "inf_us_p99": 4.2361,
+      "inf_us_std": 0.0141,
+      "cpu_duty_pct_at_100hz": 0.0419
+    },
+    "resources": {
+      "flash_bytes": 541,
+      "ram_bytes": 60,
+      "stack_headroom_bytes": 1024,
+      "heap": "none"
+    },
+    "energy": {
+      "ids_energy_per_inf_nj": 0.156441,
+      "ids_energy_per_inf_pj": 156.441,
+      "ids_power_overhead_uw_at_100hz": 0.0156
+    }
+  },
+  "satll_telemetry": {
+    "source_file": "Archive_2026_04_06_092229_Analysis.txt",
+    "n_samples": 2890,
+    "sys_power_W": {
+      "mean": 1.8354,
+      "std": 0.0317,
+      "min": 1.598,
+      "max": 1.9353
+    },
+    "obc_power_W": {
+      "mean": 0.9858,
+      "std": 0.0298,
+      "min": 0.8915,
+      "max": 1.0302
+    },
+    "plat_power_W": {
+      "mean": 1.313,
+      "std": 0.0202,
+      "min": 1.1814,
+      "max": 1.385
+    },
+    "comms_power_W": {
+      "mean": 0.2688,
+      "std": 0.0358,
+      "min": 0.2041,
+      "max": 0.3136
+    }
+  },
+  "power_budget_comparison": {
+    "obc_mean_mW": 985.8,
+    "ids_overhead_uw": 0.0156,
+    "ids_overhead_mW": 1.56e-05,
+    "ids_fraction_of_obc_pct": "1.58e-06",
+    "obc_plus_ids_mW": 985.800016
+  }
+}

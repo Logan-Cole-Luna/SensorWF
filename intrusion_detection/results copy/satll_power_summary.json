@@ -1,0 +1,88 @@
+{
+  "description": "SATLL full power analysis \u2014 all sessions, measured from telemetry",
+  "date": "2026-04-06",
+  "platform_rails_mW": {
+    "baseline": {
+      "sys": 1607.63,
+      "obc": 967.57,
+      "plat_5v": 1297.65,
+      "comms": 294.56,
+      "adcs_5v": 0.12,
+      "payload": 0.69
+    },
+    "accel": {
+      "sys": 2880.98,
+      "obc": 974.6,
+      "plat_5v": 1299.59,
+      "comms": 270.58,
+      "adcs_5v": 1238.4,
+      "adcs_proc": 958.79,
+      "adcs_per": 302.62,
+      "payload": 0.68
+    },
+    "rw": {
+      "sys": 3078.3,
+      "obc": 974.7,
+      "plat_5v": 1302.14,
+      "comms": 290.34,
+      "adcs_5v": 1292.79,
+      "adcs_proc": 959.11,
+      "adcs_per": 315.77,
+      "payload": 0.68
+    },
+    "nsl_ids": {
+      "sys": 1791.96,
+      "obc": 979.99,
+      "plat_5v": 1304.21,
+      "comms": 285.73,
+      "adcs_5v": 0.13,
+      "payload": 164.24
+    },
+    "unsw_ids": {
+      "sys": 1835.43,
+      "obc": 985.77,
+      "plat_5v": 1313.01,
+      "comms": 268.78,
+      "adcs_5v": 0.13,
+      "payload": 176.02
+    }
+  },
+  "ids_eval_board": {
+    "baseline_payload_leakage_mW": 0.69,
+    "nsl_run_payload_mW": {
+      "mean": 164.24,
+      "std": 19.63,
+      "n": 454
+    },
+    "unsw_run_payload_mW": {
+      "mean": 176.02,
+      "std": 12.66,
+      "n": 2866
+    },
+    "board_overhead_nsl_mW": 163.56,
+    "board_overhead_unsw_mW": 175.33,
+    "board_overhead_avg_mW": 169.44
+  },
+  "mcu_decomposition": {
+    "measured_base_current_mA": "35\u201338 (user confirmed)",
+    "mcu_base_power_mW_lo": 115.5,
+    "mcu_base_power_mW_hi": 125.4,
+    "board_peripheral_overhead_est_mW": 49.0,
+    "inference_duty_at_100hz_pct": 0.041924,
+    "inference_increment_uW_range": "48.4\u201352.6",
+    "energy_per_inference_pJ_range": "484222.2\u2013525727.0"
+  },
+  "experiment_comparisons": {
+    "adcs_accel_mW": 2499.8,
+    "adcs_rw_mW": 2567.7,
+    "board_vs_adcs_accel_pct": 13.3,
+    "board_vs_adcs_rw_pct": 11.5
+  },
+  "native_obdh_projection": {
+    "note": "If IDS ran natively on STM32H573 OBDH (no separate eval board)",
+    "h573_active_mW_est": 330.0,
+    "inference_duty_pct": 0.01208,
+    "incremental_uW": 39.86,
+    "savings_vs_eval_board_mW": 169.4
+  }
+}

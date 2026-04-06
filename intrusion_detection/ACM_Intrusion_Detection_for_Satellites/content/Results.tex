@@ -1,0 +1,115 @@
+% ------------------------------------------------------------------
+\section{Results}
+\label{sec:results}
+
+% ------------------------------------------------------------------
+\subsection{Hardware Firmware Validation}
+\label{sec:res_hardware}
+% ------------------------------------------------------------------
+
+The exported model undergoes end-to-end validation on an STM32F373C8T microcontroller operating at 72 MHz using the UART/USB-OTG CDC-ACM benchmark protocol. Table~\ref{tab:hardware} presents the measured resource utilization and timing results for both cross-domain test sets.
+
+\begin{table}[t]
+\caption{STM32F373C8T hardware benchmark at 72 MHz and 3.3 V. The flash memory includes tree decision arrays (429 B) and a feature scaler (112 B). Machine learning performance is evaluated on the respective cross-domain test sets. Power analysis results are provided in Table~\ref{tab:power}.}
+\label{tab:hardware}
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Metric} & \textbf{UNSW-NB15} & \textbf{NSL-KDD} \\
+\midrule
+Flash (tree + scaler)        & \multicolumn{2}{c}{541~B (0.53~KB)} \\
+RAM (feature buffer)         & \multicolumn{2}{c}{60~B (stack only)} \\
+Heap                         & \multicolumn{2}{c}{none (bare-metal)} \\
+\midrule
+Cycles (mean)                & 301.7 & 302.9 \\
+Inference mean               & 4.19~\textmu s & 4.21~\textmu s \\
+Inference p99                & 4.24~\textmu s & 4.24~\textmu s \\
+CPU duty @ 100~Hz            & \multicolumn{2}{c}{0.042\%} \\
+\midrule
+Samples classified           & 300,000        & 48,000 \\
+Accuracy (\%)                & 55.75          & 68.55 \\
+Recall (\%)                  & 93.64          & 52.88 \\
+Precision (\%)               & 55.85          & 86.65 \\
+F1 (\%)                      & 69.97          & 65.68 \\
+FPR (\%)                     & 90.68          & 10.76 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The flash memory footprint is 541 bytes, comprising 429 bytes for tree arrays and 112 bytes for the scaler. RAM usage consists of a stack-allocated 60-byte \texttt{float[14]} buffer, with no heap allocation. Inference completes in 4.19 to 4.21 microseconds (300 to 303 cycles) across both datasets; the p99 latency is 4.24 microseconds, demonstrating deterministic and bounded execution over 348,000 cumulative inferences. The variance of less than 0.015 microseconds is attributable to the fixed-depth structure, as each classification traverses a single root-to-leaf path. At a polling rate of 100 Hz, the intrusion detection system utilizes 0.042\% of the CPU. Power analysis results are detailed in Section~\ref{sec:res_power}.
+
+% ------------------------------------------------------------------
+\subsection{Cross-Domain Generalization}
+\label{sec:res_crossdomain}
+% ------------------------------------------------------------------
+
+The hardware results in Table~\ref{tab:hardware} quantify out-of-domain performance when the model trained on native satellite CAN traffic classifies benchmark network flows encoded as CAN frames. On the NSL-KDD dataset, the firmware achieves 52.88\% recall and 10.76\% false positive rate (FPR), correctly identifying approximately half of the 31 attack types while maintaining a manageable false positive rate. For UNSW-NB15, recall increases to 93.64\%, but the FPR rises to 90.68\%, suggesting that the class boundary learned from CAN telemetry is excessively permissive given this dataset's class distribution (55\% attack).
+
+The per-attack breakdown for NSL-KDD (Table~\ref{tab:per_attack_full}, Appendix) demonstrates the anticipated pattern: anomaly-based attacks that modify payload statistics (buffer\_overflow: 52\%, rootkit: 55\%, xlock: 57\%) are detected at rates above the mean recall of 35\%. In contrast, purely semantic attacks with structurally normal payloads (xterm: 7\%, sendmail: 10\%, xsnoop: 10\%) achieve near-zero detection rates. These results indicate that the satellite CAN feature set captures meaningful signal structure even from unfamiliar traffic, but also highlight the necessity of training on mission-representative data for effective production deployment.
+
+
+% ------------------------------------------------------------------
+\subsection{Power Budget Analysis}
+\label{sec:res_power}
+% ------------------------------------------------------------------
+
+Power consumption was characterized across five SATLL sessions encompassing three operational states: platform idle (baseline), sensor experiments (accelerometer and reaction wheel), and IDS benchmark runs (NSL-KDD and UNSW-NB15). EPS housekeeping telemetry was recorded at one-second intervals, and per-rail power was calculated from decoded CDH fields using $P = V \times I$. The STM32F373C8T evaluation board received power from the SATLL payload 5 V rail during all IDS sessions, allowing the payload rail to directly reflect total board consumption. Table~\ref{tab:power} provides the per-session, per-rail breakdown and details the decomposition of board consumption into MCU base, board peripherals, and the IDS inference-specific increment.
+
+\begin{table*}[t]
+\caption{SATLL per-rail power (mean mW) across all five sessions derived from EPS telemetry, with IDS board decomposition for the benchmark runs.}
+\label{tab:power}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{Component} & \textbf{Baseline} & \textbf{Accel.} & \textbf{Rx Wheel} & \textbf{NSL run} & \textbf{UNSW run} \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{SATLL platform rails (mW)}} \\
+System total          & 1,608 & 2,881 & 3,078 & 1,792 & 1,835 \\
+OBC                   &   968 &   975 &   975 &   980 &   986 \\
+Platform 5~V          & 1,298 & 1,300 & 1,302 & 1,304 & 1,313 \\
+Comms                 &   295 &   271 &   290 &   286 &   269 \\
+ADCS 5~V              &     — & 1,238 & 1,293 &     — &     — \\
+ADCS Proc             &     — &   959 &   959 &     — &     — \\
+ADCS Periph           &     — &   303 &   316 &     — &     — \\
+Payload 5~V (IDS board)&  0.7 &   0.7 &   0.7 & 164   & 176   \\
+$n$ (samples)         &   333 &   360 &   357 &   520 & 2,890 \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{IDS board decomposition}} \\
+Total board draw (mW)     & \multicolumn{2}{c}{—} & & 163.6 & 175.3 \\
+MCU base draw (mW)        & \multicolumn{2}{c}{—} & & \multicolumn{2}{c}{115--125} \\
+Board peripherals (mW)    & \multicolumn{2}{c}{—} & & \multicolumn{2}{c}{$\approx$49} \\
+\textbf{IDS inference increment} (\textmu W) & \multicolumn{2}{c}{—} & & \multicolumn{2}{c}{\textbf{$\leq$48--53}} \\
+IDS increment / ADCS overhead & \multicolumn{2}{c}{—} & & \multicolumn{2}{c}{$<$0.004\%} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+
+
+
+\textbf{Platform baseline.} In the absence of experiments and without the IDS board connected, the On-Board Computer (OBC) consumes 967.6~mW, while the complete SATLL board draws 1,607.6~mW. Both the Attitude Determination and Control System (ADCS) and payload power rails remain inactive.
+
+\textbf{Experiment overhead.} Activating the ADCS subsystem for the accelerometer test increases power consumption by 1,273~mW above the baseline, resulting in a total system draw of 2,881~mW. Engaging the reaction wheel further increases consumption by 1,471~mW (system total 3,078~mW); the additional 197~mW compared to the accelerometer baseline corresponds to the wheel motor current, as verified by telemetry-logged wheel speeds (mean 93.7~RPM, maximum 1,001~RPM). The OBC rail remains stable at 968--975~mW across all non-IDS sessions and is not affected by subsystem loading.
+
+\textbf{IDS evaluation board power draw.} The payload 5 V rail records power consumption of 163.6 mW (NSL, $n{=}454$) and 175.3 mW (UNSW, $n{=}2866$), yielding a mean value of 169 mW above baseline leakage. This value reflects the total power cost of the current external evaluation configuration, which includes the microcontroller unit (MCU), USB Full-Speed (USB-FS) bridge, low-dropout (LDO) regulator, and passive components. The following breakdown is derived from the measured MCU base current of 35–38 mA at 3.3 V:
+\begin{itemize}
+    \item \textbf{MCU base (constant):} The STM32F373C8T passively consumes 115--125~mW.
+    \item \textbf{Board peripherals:} Approximately 49 mW, including the USB-FS bridge, LDO regulator, passive components, and debug header.
+    \item \textbf{IDS inference increment (upper bound):} $\Delta P \leq 120~\text{mW} \times 0.042\% = 48\text{--}53~\mu\text{W}$. This value represents the marginal power attributable to the 302-cycle tree traversal at 100 Hz and constitutes the actual power cost of the IDS algorithm.
+\end{itemize}
+
+\textbf{The IDS algorithm draws at most 53 \textmu W}. In operational context, this represents 0.004\% of the accelerometer ADCS overhead (1,273 mW) and 0.003\% of the reaction wheel ADCS overhead (1,471 mW). The total evaluation board draw of 169 mW, which is dominated by the external MCU and USB hardware, reflects the cost of the current prototype setup rather than the IDS algorithm itself. This overhead is eliminated by native OBDH integration.
+
+
+
+\begin{comment}
+    
+
+\textbf{Native OBDH integration projection.} Executing the IDS algorithm natively on the STM32H573 OBDH eliminates the need for the external evaluation board. The marginal computational cost for OBDH at 100~Hz is bounded by:
+\[
+    \Delta P_{\text{native}} \leq I_{\text{H573}} \cdot V_{\text{DD}} \cdot \frac{N_{\text{cyc}}}{f_{\text{clk}}} \cdot f_{\text{poll}} \approx 40~\mu\text{W}
+\]
+This calculation uses $I_{\text{H573}} \approx 100$~mA, $N_{\text{cyc}} = 302$, $f_{\text{clk}} = 250$~MHz, and $f_{\text{poll}} = 100$~Hz. This approach eliminates the entire 169~mW board overhead while maintaining the same order of magnitude for the inference cost (48--53~\textmu W).
+
+\end{comment}

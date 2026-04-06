@@ -1,0 +1,395 @@
+% ============================================================
+% References — Energy-Efficient Embedded Cybersecurity for Satellite Avionics
+% Fully verified and corrected 2026-04-03
+%
+% Changes from original:
+%  - 8 duplicate entries removed (nist8401, spd5, telemanom, opssat,
+%    distributed_ids_cubesat, cucd, aegissat, PayloadSpace2026)
+%  - Authors added for ESA2023, AegisSat2025, CuCDID2026, CSIS2023,
+%    CSIS2025, Brattle2024, LSE2023
+%  - NIST2022gps: sole author corrected (Lombardi only), year fixed to 2021
+%  - Nason2002: entry type, year, booktitle fully corrected (was 2013 Acta)
+%  - Hundman2018: changed @article -> @inproceedings, added DOI + pages
+%  - Arnold2012: first name corrected to "Scott Sterling"
+%  - WEF2025: title corrected to match actual article
+%  - UNSW2015/NSLKDD2009: pages and address added
+%  - NIST2022: report number NIST IR 8401 added
+%  - CSIS2025: URL note added
+%  - All URLs verified live as of 2026-04-03
+% ============================================================
+
+% ============================================================
+% Satellite growth & deployment
+% ============================================================
+
+@misc{Pixalytics2025,
+  author      = {{Pixalytics Ltd}},
+  title       = {How Many Satellites Are Orbiting the {Earth} in 2025?},
+  year        = {2025},
+  month       = apr,
+  note        = {Data from UNOOSA and Gunter's Space Page as of March 2025.
+                 Available: \url{https://www.pixalytics.com/satellites-in-space-2025/}}
+}
+
+@misc{PayloadSpace2025,
+  author      = {{Payload Space}},
+  title       = {2025 Orbital Launch Attempts by Country},
+  year        = {2026},
+  month       = jan,
+  note        = {Data compiled by Jonathan McDowell.
+                 Available: \url{https://payloadspace.com/2025-orbital-launch-attempts-by-country/}}
+}
+
+@misc{NanoAvionics2025,
+  author      = {{NanoAvionics}},
+  title       = {How Many Satellites Are in Space?},
+  year        = {2025},
+  note        = {Available: \url{https://nanoavionics.com/blog/how-many-satellites-are-in-space/}}
+}
+
+@misc{ESA2025,
+  author       = {{European Space Agency}},
+  title        = {Around 100{,}000 Satellites Are Expected to Be in Orbit by 2030},
+  year         = {2025},
+  note         = {Available: \url{https://www.esa.int/ESA_Multimedia/Images/2025/04/Around_100_000_satellites_are_expected_to_be_in_orbit_by_2030}}
+}
+
+% ============================================================
+% Economic dependence on satellites / GPS
+% ============================================================
+
+% CORRECTED: TN 2189 has a single author (Lombardi only). Nelson and Novick
+% co-authored companion TN 2187, not TN 2189. Published November 2021.
+@techreport{NIST2022gps,
+  author      = {Lombardi, Michael A.},
+  title       = {An Evaluation of Dependencies of Critical Infrastructure Timing
+                 Systems on the Global Positioning System ({GPS})},
+  institution = {National Institute of Standards and Technology},
+  number      = {NIST TN 2189},
+  year        = {2021},
+  doi         = {10.6028/NIST.TN.2189}
+}
+
+% CORRECTED: Authors are Coleman Bazelon and Parama Sanyal; month October 2024
+@techreport{Brattle2024,
+  author      = {Bazelon, Coleman and Sanyal, Parama},
+  title       = {Economic Benefits of {GPS} and the Cost of a {GPS} Outage in the {U.S.}},
+  institution = {The Brattle Group},
+  year        = {2024},
+  month       = oct,
+  note        = {Prepared for NextNav}
+}
+
+% ============================================================
+% White House / policy
+% ============================================================
+
+@techreport{WhiteHouse2025,
+  author      = {{Office of the National Cyber Director, The White House}},
+  title       = {Space System Cybersecurity: Space Industry Perspectives},
+  institution = {The White House},
+  year        = {2025},
+  month       = jan,
+  note        = {Available: \url{https://bidenwhitehouse.archives.gov/wp-content/uploads/2025/01/Space-System-Cybersecurity-Industry-Perspectives-Report.pdf}}
+}
+
+@techreport{SPD52020,
+  author      = {{The White House}},
+  title       = {Space Policy Directive-5: Cybersecurity Principles for Space Systems},
+  institution = {Executive Office of the President},
+  year        = {2020}
+}
+
+% ============================================================
+% Threat landscape
+% ============================================================
+
+% AUTHORS ADDED: Bingen, Johnson, Young, Raymond (from CSIS report cover)
+@techreport{CSIS2023,
+  author      = {Bingen, Kari A. and Johnson, Kaitlyn and Young, Makena and Raymond, John W.},
+  title       = {Space Threat Assessment 2023},
+  institution = {CSIS Aerospace Security Project},
+  year        = {2023},
+  note        = {Available: \url{https://aerospace.csis.org/space-threat-assessment-2023/}}
+}
+
+% AUTHORS ADDED: Swope, Bingen, Young, LaFave (April 2025)
+@techreport{CSIS2025,
+  author      = {Swope, Clayton and Bingen, Kari A. and Young, Makena and LaFave, Kendra},
+  title       = {Space Threat Assessment 2025},
+  institution = {CSIS Aerospace Security Project},
+  year        = {2025},
+  month       = apr,
+  note        = {Available: \url{https://aerospace.csis.org/space-threat-assessment-2025/}}
+}
+
+% NOTE: Article title in SpaceNews is "The race to defend satellites from cyberattacks."
+% The URL slug references Deloitte's payload, which is the subject of the article.
+@misc{SpaceNews2025,
+  author      = {Erwin, Sandra},
+  title       = {The Race to Defend Satellites from Cyberattacks},
+  howpublished= {SpaceNews},
+  year        = {2025},
+  month       = nov,
+  note        = {Space ISAC reported 118\% surge in space-related cyber incidents Jan--Aug 2025.
+                 Available: \url{https://spacenews.com/deloittes-payloads-will-test-whether-satellites-can-defend-themselves/}}
+}
+
+% ============================================================
+% Landmark attack cases
+% ============================================================
+
+@misc{Viasat2022,
+  author      = {{Viasat Inc.}},
+  title       = {{KA-SAT} Network Cyber Attack Overview},
+  year        = {2022},
+  month       = mar,
+  note        = {Available: \url{https://www.viasat.com/perspectives/corporate/2022/ka-sat-network-cyber-attack-overview/}}
+}
+
+@techreport{SentinelOne2022,
+  author      = {Guerrero-Saade, Juan Andres and van Amerongen, Max},
+  title       = {{AcidRain}: A Modem Wiper Rains Down on {Europe}},
+  institution = {SentinelOne SentinelLabs},
+  year        = {2022},
+  month       = mar,
+  note        = {Available: \url{https://www.sentinelone.com/labs/acidrain-a-modem-wiper-rains-down-on-europe/}}
+}
+
+% CORRECTED: Actual title is "Why we need to address cyber risks to secure space tech"
+@misc{WEF2025,
+  author      = {{World Economic Forum}},
+  title       = {Why We Need to Address Cyber Risks to Secure Space Tech},
+  year        = {2025},
+  month       = may,
+  note        = {Documents the March 2025 POLSA breach.
+                 Available: \url{https://www.weforum.org/stories/2025/05/securing-space-why-we-need-to-address-cyber-risks-in-orbit/}}
+}
+
+% ============================================================
+% Vulnerability of commercial satellites / policy
+% ============================================================
+
+% AUTHOR ADDED: Walter Peeters (confirmed via EuroSpaceHub citation and LSE page)
+@techreport{LSE2023,
+  author      = {Peeters, Walter},
+  title       = {Cyberattacks on Satellites},
+  institution = {London School of Economics, LSE IDEAS},
+  year        = {2023},
+  note        = {Available: \url{https://www.lse.ac.uk/ideas/projects/space-policy/publications/Cyberattacks-on-Satellites}}
+}
+
+@techreport{ENISA2025,
+  author      = {{European Union Agency for Cybersecurity (ENISA)}},
+  title       = {Space Threat Landscape Report},
+  institution = {ENISA},
+  year        = {2025}
+}
+
+% CORRECTED: Added report number NIST IR 8401
+@techreport{NIST2022,
+  author      = {{National Institute of Standards and Technology}},
+  title       = {Satellite Ground Segment: Applying the Cybersecurity Framework},
+  institution = {NIST},
+  number      = {NIST IR 8401},
+  year        = {2022}
+}
+
+@techreport{CISA2023,
+  author      = {{Cybersecurity and Infrastructure Security Agency}},
+  title       = {Secure-by-Design: Shifting the Balance of Cybersecurity Risk},
+  institution = {CISA},
+  year        = {2023},
+  note        = {Available: \url{https://www.cisa.gov/resources-tools/resources/secure-by-design}}
+}
+
+@misc{MayerBrown2025,
+  author      = {{Mayer Brown}},
+  title       = {Securing the Final Frontier: Cybersecurity Risk, Regulation, and
+                 Compliance Trends in Space and Satellite Operations},
+  year        = {2025},
+  month       = dec,
+  note        = {Documents the reintroduction of the Satellite Cybersecurity Act, Dec.\ 2025.
+                 Available: \url{https://www.mayerbrown.com/en/insights/publications/2025/12/securing-the-final-frontier-cybersecurity-risk-regulation-and-compliance-trends-in-space-and-satellite-operations}}
+}
+
+@article{NewSpace2024,
+  author       = {Falco, Gregory and others},
+  title        = {Survey of Space Professionals' Perception of Satellite Cybersecurity
+                  from 2012 to 2022: Decision-Makers' Thoughts on Satellite
+                  Cybersecurity Evolving},
+  journal      = {New Space},
+  year         = {2024},
+  doi          = {10.1089/space.2024.0015}
+}
+
+% ============================================================
+% IDS prior work
+% ============================================================
+
+% AUTHORS ADDED (from IEEE Xplore and ResearchGate):
+% Driouch, Otman and Bah, Slimane and Guennoun, Zouhair (Mohammed V University, Rabat)
+@inproceedings{ESA2023,
+  author      = {Driouch, Otman and Bah, Slimane and Guennoun, Zouhair},
+  title       = {Distributed Intrusion Detection System for {CubeSats} Based on
+                 Deep Learning Packet Classification Model},
+  booktitle   = {ESA Workshop on Aerospace Security},
+  year        = {2023}
+}
+
+% AUTHORS ADDED (from NDSS SpaceSec 2025 program):
+% Idan, Roee and Peled, Roy and Ben Siman Tov, Aviel and Markus, Eli and
+% Zadov, Boris and Chodeda, Ofir and Fadida, Yohai (Ben Gurion University of the Negev)
+% Holschke, Oliver and Plachy, Jan (T-Labs, Research & Innovation)
+% Elovici, Yuval and Shabtai, Asaf (Ben Gurion University of the Negev)
+@inproceedings{AegisSat2025,
+  author      = {Idan, Roee and Peled, Roy and {Ben Siman Tov}, Aviel and Markus, Eli
+                 and Zadov, Boris and Chodeda, Ofir and Fadida, Yohai and Holschke, Oliver
+                 and Plachy, Jan and Elovici, Yuval and Shabtai, Asaf},
+  title       = {{AegisSat}: An Open Satellite Cybersecurity Testbed},
+  booktitle   = {SpaceSec Workshop (NDSS)},
+  year        = {2025}
+}
+
+% AUTHORS ADDED (from ScienceDirect Data in Brief article):
+% Fayyaz, Yasamin and Afrasiabi, Seyedeh Negar and Yang, Li and El-Khatib, Khalil
+@article{CuCDID2026,
+  author      = {Fayyaz, Yasamin and Afrasiabi, Seyedeh Negar and Yang, Li
+                 and El-Khatib, Khalil},
+  title       = {{CubeSat} Cybersecurity Dataset for Intrusion Detection ({CuCD-ID})},
+  journal     = {Data in Brief},
+  year        = {2026}
+}
+
+% CORRECTED: Was @article; changed to @inproceedings; added DOI and pages.
+@inproceedings{Hundman2018,
+  author      = {Hundman, Kyle and Constantinou, Valentino and Laporte, Christopher
+                 and Colwell, Ian and Soderstrom, Tom},
+  title       = {Detecting Spacecraft Anomalies Using {LSTMs} and Nonparametric
+                 Dynamic Thresholding},
+  booktitle   = {Proceedings of the 24th ACM SIGKDD International Conference on
+                 Knowledge Discovery \& Data Mining},
+  year        = {2018},
+  pages       = {387--395},
+  doi         = {10.1145/3219819.3219845}
+}
+
+@article{OPSSAT2025,
+  author      = {{European Space Agency}},
+  title       = {{OPSSAT-AD}: A Dataset for Anomaly Detection in Satellite Telemetry},
+  journal     = {Scientific Data},
+  year        = {2025}
+}
+
+% ============================================================
+% Hardware / Zubax
+% ============================================================
+
+@misc{ZubaxBabelShop2026,
+  author       = {{Zubax Shop}},
+  title        = {{CANFace CF1 ``Babel'' Product Page}},
+  year         = {2026},
+  howpublished = {Online},
+  url          = {https://shop.zubax.com/products/zubax-babel},
+  note         = {Accessed: 2026-04-03}
+}
+
+@misc{ZubaxCanfaceCF1Repo2026,
+  author       = {{Zubax}},
+  title        = {{canface\_cf1: Zubax Babel Firmware Repository}},
+  year         = {2026},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/Zubax/canface_cf1},
+  note         = {Accessed: 2026-04-03}
+}
+
+% ============================================================
+% CubeSat power budget
+% ============================================================
+
+% CORRECTED: First name is "Scott Sterling Arnold" not "Scott S. Arnold"
+@inproceedings{Arnold2012,
+  author    = {Arnold, Scott Sterling and Nuzzaci, Ryan and Gordon-Ross, Ann},
+  title     = {Energy Budgeting for {CubeSats} with an Integrated {FPGA}},
+  booktitle = {2012 IEEE Aerospace Conference},
+  year      = {2012},
+  pages     = {1--14},
+  doi       = {10.1109/AERO.2012.6187240}
+}
+
+% FULLY CORRECTED: Was @article in Acta Astronautica (2013) — WRONG.
+% Actual paper: @inproceedings, 2002 IEEE Aerospace Conference, Big Sky MT.
+% Author order confirmed as Nason, Puig-Suari, Twiggs. Key renamed Nason2002.
+@inproceedings{Nason2002,
+  author    = {Nason, Isaac and Puig-Suari, Jordi and Twiggs, Robert},
+  title     = {Development of a Family of Pico-Satellite Deployers Based on
+               the {CubeSat} Standard},
+  booktitle = {Proceedings of the 2002 IEEE Aerospace Conference},
+  year      = {2002},
+  address   = {Big Sky, MT, USA},
+  doi       = {10.1109/AERO.2002.1035513}
+}
+
+@misc{S4Space,
+  author    = {{S4 Space}},
+  title     = {Reliable, Ultra-Low Power On-Board Computer},
+  year      = {2023},
+  note      = {Product documentation. Redundant OBC consumes $<$15~mW in nominal operation.
+               Available: \url{https://www.s4-space.com/files/S4_OBC.pdf}}
+}
+
+% ============================================================
+% IDS Datasets
+% ============================================================
+
+% CORRECTED: Added pages and address
+@inproceedings{UNSW2015,
+  author    = {Moustafa, Nour and Slay, Jill},
+  title     = {{UNSW-NB15}: A Comprehensive Data Set for Network Intrusion
+               Detection Systems},
+  booktitle = {Proceedings of the Military Communications and Information
+               Systems Conference (MilCIS)},
+  year      = {2015},
+  pages     = {1--6},
+  address   = {Canberra, Australia},
+  doi       = {10.1109/MilCIS.2015.7348942}
+}
+
+% CORRECTED: Added pages and address
+@inproceedings{NSLKDD2009,
+  author    = {Tavallaee, Mahbod and Bagheri, Ebrahim and Lu, Wei and
+               Ghorbani, Ali A.},
+  title     = {A Detailed Analysis of the {KDD CUP 99} Data Set},
+  booktitle = {Proceedings of the IEEE Symposium on Computational
+               Intelligence for Security and Defense Applications (CISDA)},
+  year      = {2009},
+  pages     = {1--6},
+  address   = {Ottawa, ON, Canada},
+  doi       = {10.1109/CISDA.2009.5356528}
+}
+
+% ============================================================
+% Evaluation platform
+% ============================================================
+
+@inproceedings{Sellers2022,
+  author    = {Sellers, Jerry J. and Van Wirt, Peter and Paffett, John and Winters, Amanda},
+  title     = {{EssentialSAT}: A Space Systems Engineering Learning Laboratory},
+  booktitle = {ASCEND 2022},
+  year      = {2022},
+  month     = oct,
+  publisher = {American Institute of Aeronautics and Astronautics},
+  address   = {Las Vegas, Nevada},
+  doi       = {10.2514/6.2022-4207}
+}
+
+@manual{KISPE2025,
+  author      = {{KISPE Ltd.}},
+  title       = {Satellite Learning Laboratory Product Guide},
+  organization= {KISPE Ltd.},
+  address     = {Farnborough, Hampshire, UK},
+  year        = {2025},
+  month       = jan,
+  note        = {Version 1.3. Reference: KS-DOC-02120-03.
+                 Available: \url{https://training.kispe.co.uk/satll}}
+}

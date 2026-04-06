@@ -1,0 +1,95 @@
+{
+  "hardware": {
+    "mcu": "STM32F373C8T",
+    "hclk_hz": 72000000,
+    "vdd_v": 3.3,
+    "active_run_current_a": 0.027
+  },
+  "model": {
+    "name": "TinyDecisionTree (CAN)",
+    "n_features": 15,
+    "feature_names": [
+      "can_id_norm",
+      "dlc",
+      "data_mean",
+      "data_std",
+      "data_entropy",
+      "data_range",
+      "hamming_dist",
+      "inter_arrival_mean",
+      "inter_arrival_std",
+      "id_freq",
+      "bus_load",
+      "unique_ids",
+      "dlc_anomaly",
+      "id_is_known",
+      "payload_delta"
+    ],
+    "tree_nodes": 39,
+    "tree_depth": 5,
+    "flash_bytes": 549,
+    "flash_kb": 0.536
+  },
+  "performance": {
+    "n_samples": 500,
+    "accuracy": 0.968,
+    "precision": 0.9671,
+    "recall": 1.0,
+    "f1": 0.9833,
+    "fpr": 0.5333,
+    "tp": 470,
+    "tn": 14,
+    "fp": 16,
+    "fn": 0,
+    "per_attack_type": {
+      "dos": {
+        "recall": 1.0,
+        "fpr": 0.5333,
+        "n_attacks": 152
+      },
+      "fuzzy": {
+        "recall": 1.0,
+        "fpr": 0.5333,
+        "n_attacks": 310
+      },
+      "spoofing": {
+        "recall": 1.0,
+        "fpr": 0.5333,
+        "n_attacks": 8
+      }
+    }
+  },
+  "timing": {
+    "cycles_min": 89,
+    "cycles_max": 138,
+    "cycles_mean": 114.23,
+    "inf_us_min": 1.2361,
+    "inf_us_max": 1.9167,
+    "inf_us_mean": 1.5865,
+    "inf_us_std": 0.103,
+    "inf_us_p95": 1.75,
+    "inf_us_p99": 1.8335
+  },
+  "resource_usage": {
+    "stack_used_bytes_min": 64,
+    "stack_used_bytes_max": 64,
+    "stack_canary_budget": 1024,
+    "stack_headroom_bytes": 960,
+    "flash_bytes_tree": 429,
+    "flash_bytes_scaler": 120,
+    "flash_bytes_total": 549,
+    "ram_bytes_features": 60,
+    "note": "bare-metal, no heap (no dynamic allocation)"
+  },
+  "energy": {
+    "method": "whole_chip_active_run_current \u00d7 inference_duration",
+    "note": "Conservative upper bound. Actual IDS contribution is ~(inf_us/poll_period) fraction of this.",
+    "whole_chip_energy_per_inf_nj": 141.3547,
+    "ids_duty_fraction_at_100hz": 0.000159,
+    "energy_per_inf_nj_estimate": 0.022426,
+    "energy_per_inf_pj_estimate": 22.4255,
+    "power_overhead_uw_at_100hz": 0.0022
+  },
+  "host_stream_time_s": 0.041,
+  "firmware_summary_match": true
+}
