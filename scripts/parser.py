@@ -85,12 +85,14 @@ def parse_analysis_file(filepath: str) -> tuple[pd.DataFrame, pd.DataFrame]:
             if m:
                 _flush(current_record, current_type, cdh_records, adcs_records)
                 time_str, date_str, pkt_type = m.group(1), m.group(2), m.group(3)
-                try:
-                    ts = pd.to_datetime(
-                        f"{date_str} {time_str}", format="%d/%m/%Y %H:%M:%S.%f"
-                    )
-                except Exception:
-                    ts = None
+                ts = None
+                dt_str = f"{date_str} {time_str}"
+                for fmt in ("%d/%m/%Y %H:%M:%S.%f", "%m/%d/%Y %H:%M:%S.%f"):
+                    try:
+                        ts = pd.to_datetime(dt_str, format=fmt)
+                        break
+                    except Exception:
+                        pass
                 current_record = {"timestamp": ts}
                 current_type   = pkt_type.strip()
                 continue

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+A4_imu_allzero,1115,1252,high,"['ACCEL_X', 'ACCEL_Y', 'ACCEL_Z', 'GYRO_X', 'GYRO_Y', 'GYRO_Z', 'MAG_X', 'MAG_Y', 'MAG_Z']",easy

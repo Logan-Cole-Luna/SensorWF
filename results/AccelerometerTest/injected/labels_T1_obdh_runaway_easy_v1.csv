@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+T1_obdh_runaway,1241,1475,low,['TEMP_OBDH'],easy

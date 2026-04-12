@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels
-COMPOUND_thermal_power_fault,150,544,high,"['BATT_CHR_V', 'TEMP_OBDH', 'SYS_V']"

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+A2_gyro_clipping,13589,14815,low,['GYRO_X'],easy

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+C3_frame_error_burst,2046,3525,medium,['FRAME_ERR'],easy

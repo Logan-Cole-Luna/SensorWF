@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+P3_rail_latchup,3700,18035,high,['ADCS_5V_V'],hard

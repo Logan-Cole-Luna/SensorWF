@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+T2_board_step,1089,1737,low,['TEMP_ADCS'],easy

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+W2_wheel_stiction_stop,246,658,medium,['WHEEL_SPEED'],medium

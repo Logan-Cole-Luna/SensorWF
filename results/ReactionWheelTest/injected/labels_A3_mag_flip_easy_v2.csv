@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+A3_mag_flip,167,247,high,"['MAG_X', 'MAG_Y', 'MAG_Z']",easy

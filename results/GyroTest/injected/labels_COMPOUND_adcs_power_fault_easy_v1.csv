@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+COMPOUND_adcs_power_fault,977,1301,medium,"[np.str_('ACCEL_Y'), 'ADCS_5V_V', np.str_('GYRO_X'), np.str_('GYRO_Z'), np.str_('MAG_Z')]",easy

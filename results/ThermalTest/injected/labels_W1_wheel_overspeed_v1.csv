@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+W1_wheel_overspeed,0,18586,high,['WHEEL_SPEED']

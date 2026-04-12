@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+P2_obc_voltage_spike,13154,13173,medium,['OBC_PWR_V'],hard

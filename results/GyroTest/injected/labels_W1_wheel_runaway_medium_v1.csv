@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+W1_wheel_runaway,837,1282,medium,['WHEEL_SPEED'],medium

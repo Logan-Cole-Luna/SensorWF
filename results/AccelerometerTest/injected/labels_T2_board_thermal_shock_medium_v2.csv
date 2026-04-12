@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+T2_board_thermal_shock,593,955,medium,['TEMP_PAYLOAD'],medium

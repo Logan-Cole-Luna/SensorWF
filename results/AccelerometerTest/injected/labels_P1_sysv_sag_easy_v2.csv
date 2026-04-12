@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+P1_sysv_sag,310,483,low,"['SYS_V', 'BATT_CHR_V']",easy

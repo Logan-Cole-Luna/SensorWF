@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+COMPOUND_adcs_power_fault,778,1381,high,"['ACCEL_Y', 'ACCEL_X', 'GYRO_Y', 'MAG_X', 'ADCS_5V_V', 'GYRO_X', 'GYRO_Z', 'MAG_Y', 'MAG_Z', 'ACCEL_Z']"

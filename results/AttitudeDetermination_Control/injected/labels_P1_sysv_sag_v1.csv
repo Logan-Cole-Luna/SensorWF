@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels
-P1_sysv_sag,174,213,medium,"['SYS_V', 'BATT_CHR_V']"
