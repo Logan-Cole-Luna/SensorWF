@@ -319,11 +319,14 @@ class IsolationForestDetector:
     """
 
     def __init__(self, n_estimators: int = 300, contamination: float = 0.02,
-                 random_state: int = 42, max_features: int = 32, pca_variance: float = 0.97):
+                 random_state: int = 42, max_features: int = 32, pca_variance: float = 0.97,
+                 use_pca: bool = True, use_rotation: bool = True, n_ensemble: int = 3):
         self._scaler = StandardScaler()
         self._max_features = max(8, int(max_features))
         self._pca_variance = float(pca_variance)
-        self._n_ensemble = 3
+        self._use_pca = bool(use_pca)
+        self._use_rotation = bool(use_rotation)
+        self._n_ensemble = max(1, int(n_ensemble))
         self._random_state = int(random_state)
         self._contamination = float(contamination)
         self._n_estimators = int(n_estimators)
@@ -352,7 +355,7 @@ class IsolationForestDetector:
         self._feature_idx = np.sort(keep)
         Xs = self._scaler.fit_transform(X[:, self._feature_idx])
 
-        if Xs.shape[1] >= 8 and np.isfinite(Xs).all() and float(np.var(Xs, axis=0).sum()) > 1e-10:
+        if self._use_pca and Xs.shape[1] >= 8 and np.isfinite(Xs).all() and float(np.var(Xs, axis=0).sum()) > 1e-10:
             self._pca = PCA(n_components=self._pca_variance, svd_solver="full", random_state=42)
             Xf = self._pca.fit_transform(Xs)
             if np.isfinite(Xf).all() and Xf.shape[1] > 0:
@@ -370,7 +373,10 @@ class IsolationForestDetector:
         self._rotations = []
         d = Xf.shape[1]
         for i in range(self._n_ensemble):
-            rot = self._random_rotation(d, self._random_state + 97 * (i + 1))
+            if self._use_rotation:
+                rot = self._random_rotation(d, self._random_state + 97 * (i + 1))
+            else:
+                rot = np.eye(d)
             model = IsolationForest(
                 n_estimators=self._n_estimators,
                 contamination=self._contamination,
