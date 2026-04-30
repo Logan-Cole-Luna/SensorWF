@@ -1067,3 +1067,168 @@ def print_ml_summary(ml_results: list[dict]) -> None:
                   f"{row['recall']:>7.3f}  {row['f1']:>7.3f}  {row['auc_roc']:>8.3f}")
 
     print("=" * 72 + "\n")
+
+
+# =============================================================================
+# Generic ML evaluation -- works for any domain (ECG, Climate, Satellite, ...)
+# =============================================================================
+
+def build_generic_feature_matrix(
+    df: pd.DataFrame,
+    channels: list[str],
+    window: int = 15,
+) -> tuple[np.ndarray | None, list[str]]:
+    """
+    Generic feature matrix for any set of numeric channels.
+    Mirrors build_feature_matrix but takes an explicit channel list.
+    Features: raw, diff, rolling mean/std, timing dt.
+    """
+    cols = [c for c in channels if c in df.columns and df[c].notna().any()]
+    if not cols:
+        return None, []
+
+    raw = df[cols].copy().astype(float).ffill().bfill().fillna(0.0)
+    arrays: list[np.ndarray] = [raw.to_numpy()]
+    names: list[str] = list(cols)
+
+    diff = raw.diff().fillna(0.0).to_numpy()
+    arrays.append(diff)
+    names += [f"d_{c}" for c in cols]
+
+    if "elapsed_s" in df.columns:
+        elapsed = pd.to_numeric(df["elapsed_s"], errors="coerce").ffill().bfill().fillna(0.0)
+        dt = elapsed.diff().fillna(0.0)
+        arrays.append(dt.to_numpy()[:, None])
+        names.append("dt_sample")
+
+    if len(df) >= window * 3:
+        rm = raw.rolling(window, min_periods=1).mean().to_numpy()
+        rs = raw.rolling(window, min_periods=1).std().fillna(0.0).to_numpy()
+        arrays.append(rm)
+        arrays.append(rs)
+        names += [f"rm_{c}" for c in cols]
+        names += [f"rs_{c}" for c in cols]
+
+    return np.concatenate(arrays, axis=1).astype(np.float64), names
+
+
+def run_generic_ml_evaluation(
+    injected_dir: str,
+    files_generated: list[tuple],
+    clean_df: pd.DataFrame,
+    channels: list[str],
+    window: int = 15,
+    family: str = "Unknown",
+) -> list[dict]:
+    """
+    Generic ML evaluation loop for any domain.
+
+    Parameters
+    ----------
+    injected_dir   : directory containing injected CSVs and label CSVs
+    files_generated: list of (tag, tier, variant) tuples
+    clean_df       : the clean (nominal) session DataFrame
+    channels       : list of channel names to use for features
+    window         : rolling window size for feature engineering
+    family         : domain/family name for display and threshold tuning
+
+    Injected file naming (expected by this function):
+      signal_injected_{tag}_{tier}_v{v}.csv
+      labels_{tag}_{tier}_v{v}.csv
+    """
+    ml_results: list[dict] = []
+    fit_cache: dict[tuple, tuple] = {}
+
+    X_clean, feat_names = build_generic_feature_matrix(clean_df, channels, window)
+    if X_clean is None or len(X_clean) < 10:
+        print(f"  [generic eval] Insufficient clean features for {family}")
+        return []
+
+    n_train = max(10, int(len(X_clean) * _TRAIN_FRAC))
+    X_train = X_clean[:n_train]
+
+    for item in files_generated:
+        tag, tier, v = item[0], item[1], item[2]
+
+        inj_path   = os.path.join(injected_dir, f"signal_injected_{tag}_{tier}_v{v}.csv")
+        label_path = os.path.join(injected_dir, f"labels_{tag}_{tier}_v{v}.csv")
+        if not os.path.exists(inj_path) or not os.path.exists(label_path):
+            continue
+
+        try:
+            df_inj = pd.read_csv(inj_path, low_memory=False)
+        except Exception:
+            continue
+
+        if "timestamp" in df_inj.columns:
+            df_inj["timestamp"] = pd.to_datetime(df_inj["timestamp"], errors="coerce")
+
+        X_inj, _ = build_generic_feature_matrix(df_inj, channels, window)
+        if X_inj is None:
+            continue
+
+        try:
+            label_row = pd.read_csv(label_path).iloc[0]
+            start_idx = int(label_row.get("start_idx", 0))
+            end_idx   = int(label_row.get("end_idx",   0))
+        except Exception:
+            continue
+
+        n = min(len(df_inj), len(X_inj))
+        labels = np.zeros(n, dtype=bool)
+        lo = max(0, min(start_idx, n - 1))
+        hi = max(lo, min(end_idx, n - 1))
+        labels[lo: hi + 1] = True
+
+        elapsed = (df_inj["elapsed_s"].to_numpy(dtype=float)[:n]
+                   if "elapsed_s" in df_inj.columns else np.arange(n, dtype=float))
+
+        n_feats = min(X_train.shape[1], X_inj.shape[1])
+        X_tr  = X_train[:, :n_feats]
+        X_i   = X_inj[:,  :n_feats]
+        fnames = (feat_names or [])[:n_feats]
+
+        row_base = {
+            "tag": tag, "variant": v, "tier": tier, "target": "signal",
+            "n_anomaly": int(labels.sum()), "n_total": n,
+        }
+
+        for det_name in _DETECTORS:
+            thr_pct = _threshold_percentile(det_name, family, "signal", tag)
+            det_cfg = {
+                "contamination": _if_contamination(family, "signal", tag),
+                "seq_len": _ae_seq_len(family, tag),
+                "denoise_sigma": 0.06,
+            }
+            cache_key = (det_name, family, tag, n_feats, round(thr_pct, 3))
+            try:
+                if cache_key in fit_cache:
+                    detector, train_scores, thr_val = fit_cache[cache_key]
+                else:
+                    if det_name == "ZScore":
+                        detector = ZScoreDetector()
+                    elif det_name == "RobustRollingZScore":
+                        detector = RobustRollingZScoreDetector(family=family)
+                    elif det_name == "IsolationForest":
+                        detector = IsolationForestDetector(contamination=det_cfg["contamination"])
+                    else:
+                        detector = AutoencoderDetector(
+                            seq_len=det_cfg["seq_len"],
+                            denoise_sigma=det_cfg["denoise_sigma"],
+                        )
+                    detector.fit(X_tr, fnames)
+                    train_scores = detector.score(X_tr)
+                    thr_val = _fit_threshold(detector, X_tr, thr_pct)
+                    fit_cache[cache_key] = (detector, train_scores, thr_val)
+
+                scores  = detector.score(X_i)
+                metrics = evaluate_detector(scores, labels, elapsed,
+                                            train_scores=train_scores,
+                                            threshold_pct=thr_pct,
+                                            threshold_value=thr_val)
+            except Exception as exc:
+                metrics = {"error": str(exc)}
+
+            ml_results.append({**row_base, "detector": det_name, **metrics})
+
+    return ml_results

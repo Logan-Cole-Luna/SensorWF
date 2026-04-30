@@ -1,0 +1,219 @@
+{
+  "framework": "SensorWF",
+  "version": "1.0.0",
+  "description": "A FAIR generalizable workflow framework for multi-domain scientific time-series analysis",
+  "homepage": "https://github.com/example/sensorwf",
+  "license": "MIT",
+  "domains_validated": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+
+  "modules": [
+    {
+      "id": "M1",
+      "name": "DataIngestion",
+      "label": "Data Ingestion",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Domain-adaptive ingestion that normalises raw sensor archives into a standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface.",
+      "inputs": [
+        {"name": "raw_files", "type": "file_path_or_dir", "description": "Raw sensor archive (SCOTTI v2 CSV, MIT-BIH CSV, Jena Climate CSV)"},
+        {"name": "adapter_config", "type": "dict", "description": "Domain adapter parameters (target_hz, session_minutes, year, etc.)"}
+      ],
+      "outputs": [
+        {"name": "clean_df", "type": "pd.DataFrame", "description": "Standardised time-series with timestamp, elapsed_s, and sensor channels"},
+        {"name": "adapter_meta", "type": "dict", "description": "Adapter name, channels, native_hz, session length"}
+      ],
+      "assumptions": [
+        "Each domain has a unique raw format handled by its DomainAdapter",
+        "All adapters return a DataFrame with timestamp (datetime) and elapsed_s (float)",
+        "Downsampling is domain-specific and configured via the adapter"
+      ],
+      "config_params": [
+        {"name": "target_hz",        "type": "float",  "default": null,   "description": "Target sampling rate after decimation (ECG: 50 Hz, Climate: none, Satellite: 1 Hz)"},
+        {"name": "session_minutes",  "type": "float",  "default": 5.0,    "description": "Session duration in minutes for ECG records"},
+        {"name": "year",             "type": "int",    "default": 2011,   "description": "Calendar year to extract for Climate domain"},
+        {"name": "months",           "type": "list",   "default": [1, 6], "description": "Start/end months for Climate slice"}
+      ],
+      "provone_uri": "sensorwf:DataIngestion"
+    },
+
+    {
+      "id": "M2",
+      "name": "QualityAssessment",
+      "label": "Quality Assessment",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Domain-agnostic sensor quality audit: NaN rates, stuck-channel detection, timing regularity, per-channel z-score flagging, and linear trend detection on selected channels. Outputs a machine-readable JSON quality report.",
+      "inputs": [
+        {"name": "clean_df",  "type": "pd.DataFrame", "description": "Standardised time-series from M1"},
+        {"name": "channels",  "type": "list[str]",    "description": "Sensor channels to assess"},
+        {"name": "config",    "type": "dict",          "description": "Domain quality-assessment config (thresholds, expected dt, trend channels)"}
+      ],
+      "outputs": [
+        {"name": "quality_report", "type": "dict/JSON", "description": "Per-channel quality metrics and summary flags"}
+      ],
+      "assumptions": [
+        "Stuck sensor: <= 3 unique values in a channel across the full session",
+        "Z-score flag threshold: configurable per domain (default 3.0 sigma)",
+        "Timing gap threshold: expected_dt * gap_multiplier (domain-specific)"
+      ],
+      "config_params": [
+        {"name": "stuck_unique_max",  "type": "int",   "default": 3,    "description": "Maximum unique values for a channel to be flagged as stuck"},
+        {"name": "zscore_threshold",  "type": "float", "default": 3.0,  "description": "Sigma threshold for per-channel z-score flagging"},
+        {"name": "expected_dt_s",     "type": "float", "default": null,  "description": "Expected sample interval in seconds (null = auto-estimate from median dt)"},
+        {"name": "gap_multiplier",    "type": "float", "default": 5.0,  "description": "Multiplier over expected_dt_s to define a large timing gap"},
+        {"name": "trend_channels",    "type": "list",  "default": [],   "description": "Channel names to run linear trend regression on"}
+      ],
+      "provone_uri": "sensorwf:QualityAssessment"
+    },
+
+    {
+      "id": "M3",
+      "name": "FeatureEngineering",
+      "label": "Feature Engineering",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Builds a multi-dimensional feature matrix from the clean time-series. Features include: raw channel values, first-order differences (rate-of-change), sample-interval timing, and rolling mean/standard deviation over a configurable window.",
+      "inputs": [
+        {"name": "clean_df", "type": "pd.DataFrame", "description": "Standardised time-series from M1"},
+        {"name": "channels", "type": "list[str]",    "description": "Sensor channels to engineer features over"},
+        {"name": "window",   "type": "int",           "description": "Rolling window size in samples"}
+      ],
+      "outputs": [
+        {"name": "X",             "type": "np.ndarray",  "description": "Feature matrix (n_samples, n_features)"},
+        {"name": "feature_names", "type": "list[str]",   "description": "Name of each feature column"}
+      ],
+      "assumptions": [
+        "Rolling statistics are only computed when session length >= 3 * window",
+        "NaN values are forward-filled then backward-filled before feature extraction",
+        "Window size should be tuned per domain (ECG: 100 samples, Climate: 24 samples, Satellite: 15 samples)"
+      ],
+      "config_params": [
+        {"name": "window",    "type": "int",       "default": 15,   "description": "Rolling window size in samples"},
+        {"name": "channels",  "type": "list[str]", "default": null, "description": "Channel subset (null = all channels from M1)"}
+      ],
+      "provone_uri": "sensorwf:FeatureEngineering"
+    },
+
+    {
+      "id": "M4",
+      "name": "FaultInjection",
+      "label": "Fault Injection",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Injects synthetic faults into clean sessions to produce labelled evaluation variants. Fault morphologies are drawn from domain-specific taxonomies. A three-tier difficulty system scales amplitude, duration, and channel spread simultaneously to avoid single-axis separability (Wu & Keogh 2022).",
+      "inputs": [
+        {"name": "clean_df",    "type": "pd.DataFrame", "description": "Standardised clean session from M1"},
+        {"name": "fault_types", "type": "list[dict]",   "description": "Domain fault taxonomy from adapter"},
+        {"name": "tiers",       "type": "list[str]",    "description": "Difficulty tiers: easy, medium, hard"},
+        {"name": "n_variants",  "type": "int",          "description": "Number of random variants per (type, tier) pair"},
+        {"name": "seed",        "type": "int",          "description": "Random seed for reproducibility"}
+      ],
+      "outputs": [
+        {"name": "injected_csvs", "type": "list[path]", "description": "One CSV per (fault_type, tier, variant) labelled with anomaly start/end"},
+        {"name": "label_csvs",    "type": "list[path]", "description": "Corresponding label files with start_idx, end_idx, severity"},
+        {"name": "injection_summary", "type": "CSV", "description": "Summary table of all injected variants"}
+      ],
+      "assumptions": [
+        "Tier 'easy': amp=1.45x, dur=0.30x session, spread=1.25x channels",
+        "Tier 'medium': amp=1.05x, dur=0.95x session, spread=1.00x channels",
+        "Tier 'hard': amp=0.72x, dur=1.55x session, spread=0.70x channels",
+        "All randomness flows from a seeded generator chain for bit-identical reproducibility",
+        "Fault window is placed in the second eighth of the session to ensure training data precedes it"
+      ],
+      "config_params": [
+        {"name": "tiers",      "type": "list",   "default": ["easy","medium","hard"], "description": "Difficulty tiers to generate"},
+        {"name": "n_variants", "type": "int",    "default": 2,   "description": "Variants per (fault_type, tier) pair"},
+        {"name": "seed",       "type": "int",    "default": 42,  "description": "Master random seed"}
+      ],
+      "provone_uri": "sensorwf:FaultInjection"
+    },
+
+    {
+      "id": "M5",
+      "name": "AnomalyDetection",
+      "label": "Anomaly Detection",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Trains four ML anomaly detectors on the clean session prefix and evaluates them on all injected variants. Detectors: ZScore (parametric), RobustRollingZScore (CUSUM+MAD), IsolationForest (ensemble, rotation-augmented), Autoencoder (multi-scale MLP with denoising). Decision threshold is the 99th percentile of clean training scores.",
+      "inputs": [
+        {"name": "X_clean",        "type": "np.ndarray", "description": "Feature matrix of clean session (M3 output)"},
+        {"name": "injected_dir",   "type": "path",       "description": "Directory of injected CSV files (M4 output)"},
+        {"name": "files_generated","type": "list",       "description": "List of (tag, tier, variant) tuples from M4"}
+      ],
+      "outputs": [
+        {"name": "ml_results",        "type": "list[dict]", "description": "Per-(tag, tier, variant, detector) metrics"},
+        {"name": "ml_metrics_by_tier","type": "CSV",        "description": "Aggregated metrics by tier and detector"},
+        {"name": "if_feature_importances","type": "JSON",   "description": "IsolationForest feature importance vector"}
+      ],
+      "assumptions": [
+        "Training uses the first 60% of the clean session (train_frac=0.60)",
+        "Threshold is the 99th percentile of clean training-set anomaly scores",
+        "IsolationForest uses a 3-member rotation ensemble to reduce axis-alignment bias",
+        "Autoencoder uses dual sequence lengths (8 and 16) with denoising sigma=0.06"
+      ],
+      "config_params": [
+        {"name": "train_frac",       "type": "float", "default": 0.60,  "description": "Fraction of clean session for training"},
+        {"name": "threshold_pct",    "type": "float", "default": 99.0,  "description": "Percentile of training scores for anomaly threshold"},
+        {"name": "n_estimators_if",  "type": "int",   "default": 300,   "description": "Number of trees in IsolationForest ensemble"},
+        {"name": "ae_seq_len",       "type": "int",   "default": 8,     "description": "Autoencoder temporal window length"},
+        {"name": "ae_denoise_sigma", "type": "float", "default": 0.06,  "description": "Denoising noise standard deviation for Autoencoder"}
+      ],
+      "provone_uri": "sensorwf:AnomalyDetection"
+    },
+
+    {
+      "id": "M6",
+      "name": "SemanticAnnotation",
+      "label": "Semantic Annotation",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Maps ML detector evidence (feature importances, anomaly scores) to domain OWL ontology classes. Produces a SPARQL-queryable knowledge graph in RDF/Turtle and GraphML. Edges encode IsolationForest feature importances, ontology class mappings, and per-instance local contributions.",
+      "inputs": [
+        {"name": "ml_results",    "type": "list[dict]", "description": "ML evaluation results from M5"},
+        {"name": "ontology_path", "type": "path",       "description": "Domain OWL ontology file"},
+        {"name": "feature_names", "type": "list[str]",  "description": "Feature names from M3"}
+      ],
+      "outputs": [
+        {"name": "kg_ttl",     "type": "RDF/Turtle", "description": "Ontology-linked knowledge graph"},
+        {"name": "kg_graphml", "type": "GraphML",    "description": "Knowledge graph in GraphML for visualisation"},
+        {"name": "nodes_csv",  "type": "CSV",        "description": "KG node table"},
+        {"name": "edges_csv",  "type": "CSV",        "description": "KG edge table"}
+      ],
+      "assumptions": [
+        "Feature names are matched to OWL class local names by prefix substring",
+        "IsolationForest feature_importances_ are used as edge weights",
+        "Ontology local names follow the domain-specific naming convention"
+      ],
+      "config_params": [
+        {"name": "ontology_path", "type": "path",  "default": null, "description": "Path to domain OWL file"},
+        {"name": "min_importance","type": "float", "default": 0.001,"description": "Minimum feature importance to include edge in KG"}
+      ],
+      "provone_uri": "sensorwf:SemanticAnnotation"
+    },
+
+    {
+      "id": "M7",
+      "name": "ProvenanceExport",
+      "label": "Provenance Export",
+      "version": "1.0",
+      "domain_tags": ["satellite_telemetry", "biomedical_ecg", "atmospheric_climate"],
+      "description": "Records one prov:Activity per M1-M6 module execution with wall-clock timestamps, input row counts, output file paths, and parameter values. Serialises the complete PROV-O/ProvONE trace to RDF/Turtle.",
+      "inputs": [
+        {"name": "activity_records", "type": "list[dict]", "description": "One dict per module execution (ProvenanceRecorder.record_activity)"}
+      ],
+      "outputs": [
+        {"name": "provenance_ttl", "type": "RDF/Turtle", "description": "Complete PROV-O/ProvONE provenance trace for the run"}
+      ],
+      "assumptions": [
+        "Timestamps are UTC ISO 8601",
+        "SHA-256 checksums are optional (disabled by default for speed)",
+        "One prov:Activity per module execution per domain session"
+      ],
+      "config_params": [
+        {"name": "output_path",   "type": "path", "default": "results/provenance.ttl", "description": "Output Turtle file path"},
+        {"name": "sha256_inputs", "type": "bool", "default": false, "description": "Compute SHA-256 checksums for input files"}
+      ],
+      "provone_uri": "sensorwf:ProvenanceExport"
+    }
+  ]
+}

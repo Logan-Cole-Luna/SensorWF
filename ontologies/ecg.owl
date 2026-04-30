@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://example.org/sensorwf/ecg#"
+         xml:base="https://example.org/sensorwf/ecg"
+         xmlns:ecg="https://example.org/sensorwf/ecg#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+         xmlns:ssn="http://www.w3.org/ns/ssn/"
+         xmlns:sosa="http://www.w3.org/ns/sosa/">
+
+  <!-- Ontology header -->
+  <owl:Ontology rdf:about="https://example.org/sensorwf/ecg">
+    <rdfs:label>SensorWF ECG Domain Ontology</rdfs:label>
+    <rdfs:comment>OWL ontology for the SensorWF biomedical ECG application domain.
+    Covers cardiac signal components, lead types, rhythm classes, and artifact types.
+    Feature names in the SensorWF knowledge graph are matched to class local names.</rdfs:comment>
+  </owl:Ontology>
+
+  <!-- ── Top-level signal classes ──────────────────────────────── -->
+
+  <owl:Class rdf:about="ecg:CardiacSignal">
+    <rdfs:label>Cardiac Signal</rdfs:label>
+    <rdfs:comment>A multi-lead electrical recording of cardiac activity.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:ECGLead">
+    <rdfs:label>ECG Lead</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:CardiacSignal"/>
+    <rdfs:comment>One electrode pair recording of body-surface potential difference.</rdfs:comment>
+  </owl:Class>
+
+  <!-- ── Lead types (match feature names MLII, V5) ─────────────── -->
+
+  <owl:Class rdf:about="ecg:MLII">
+    <rdfs:label>Lead II (Modified Limb II)</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGLead"/>
+    <rdfs:comment>Standard limb lead II as used in MIT-BIH ambulatory recordings.
+    Reflects inferior cardiac wall; clearest P-wave morphology.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:V5">
+    <rdfs:label>Lead V5 (Precordial)</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGLead"/>
+    <rdfs:comment>Precordial chest lead V5. Reflects lateral cardiac wall and
+    is sensitive to left ventricular ischaemia.</rdfs:comment>
+  </owl:Class>
+
+  <!-- ── Cardiac rhythm classes ─────────────────────────────────── -->
+
+  <owl:Class rdf:about="ecg:RhythmClass">
+    <rdfs:label>Cardiac Rhythm Class</rdfs:label>
+    <rdfs:comment>Top-level class for cardiac rhythm classifications.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:NormalSinusRhythm">
+    <rdfs:label>Normal Sinus Rhythm</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:RhythmClass"/>
+    <rdfs:comment>Normal beat (type N in MIT-BIH). Rate 60-100 bpm; regular P-QRS-T.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:PrematureVentricularContraction">
+    <rdfs:label>Premature Ventricular Contraction (PVC)</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:RhythmClass"/>
+    <rdfs:comment>Ectopic ventricular beat (type V in MIT-BIH). Wide QRS, compensatory pause.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:LeftBundleBranchBlock">
+    <rdfs:label>Left Bundle Branch Block (LBBB)</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:RhythmClass"/>
+    <rdfs:comment>Conduction defect (type L in MIT-BIH). Widened QRS, notched R in V5.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:AtrialFibrillation">
+    <rdfs:label>Atrial Fibrillation</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:RhythmClass"/>
+    <rdfs:comment>Irregular rhythm with absent P-waves; irregularly irregular RR intervals.</rdfs:comment>
+  </owl:Class>
+
+  <!-- ── ECG artifact / fault classes ──────────────────────────── -->
+
+  <owl:Class rdf:about="ecg:ECGArtifact">
+    <rdfs:label>ECG Artifact</rdfs:label>
+    <rdfs:comment>Non-cardiac signal contamination in an ECG recording.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:BaselineWander">
+    <rdfs:label>Baseline Wander</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGArtifact"/>
+    <rdfs:comment>Low-frequency drift (0.15-0.4 Hz) caused by respiration or patient movement.
+    SensorWF fault tag: ecg_baseline_wander.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:ElectrodeDropout">
+    <rdfs:label>Electrode Dropout</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGArtifact"/>
+    <rdfs:comment>Signal loss on one lead due to poor electrode contact.
+    SensorWF fault tag: ecg_electrode_dropout.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:EMGArtifact">
+    <rdfs:label>EMG Muscle Artifact</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGArtifact"/>
+    <rdfs:comment>High-frequency noise from skeletal muscle activity.
+    SensorWF fault tag: ecg_emg_burst.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:PowerLineInterference">
+    <rdfs:label>Power Line Interference</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGArtifact"/>
+    <rdfs:comment>60 Hz (or 50 Hz) sinusoidal contamination from electrical mains.
+    SensorWF fault tag: ecg_powerline_noise.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:AmplitudeScalingError">
+    <rdfs:label>Amplitude Scaling Error</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGArtifact"/>
+    <rdfs:comment>Multiplicative gain error from amplifier miscalibration.
+    SensorWF fault tag: ecg_amplitude_scale.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="ecg:LeadInversion">
+    <rdfs:label>Lead Inversion</rdfs:label>
+    <rdfs:subClassOf rdf:resource="ecg:ECGArtifact"/>
+    <rdfs:comment>Sign inversion of one or more leads due to electrode reversal.
+    SensorWF fault tag: ecg_lead_inversion.</rdfs:comment>
+  </owl:Class>
+
+  <!-- ── Feature → class mapping properties ────────────────────── -->
+
+  <owl:ObjectProperty rdf:about="ecg:recordedBy">
+    <rdfs:label>recorded by</rdfs:label>
+    <rdfs:domain rdf:resource="ecg:CardiacSignal"/>
+    <rdfs:range  rdf:resource="ecg:ECGLead"/>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="ecg:classifiedAs">
+    <rdfs:label>classified as</rdfs:label>
+    <rdfs:domain rdf:resource="ecg:CardiacSignal"/>
+    <rdfs:range  rdf:resource="ecg:RhythmClass"/>
+  </owl:ObjectProperty>
+
+  <owl:DatatypeProperty rdf:about="ecg:featureImportance">
+    <rdfs:label>feature importance</rdfs:label>
+    <rdfs:range rdf:resource="xsd:double"/>
+    <rdfs:comment>IsolationForest mean split frequency for this feature.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+</rdf:RDF>
