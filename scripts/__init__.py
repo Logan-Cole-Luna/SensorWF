@@ -1,1 +1,1 @@
-# scripts package — KISPE SLL Telemetry Pipeline
+# scripts — SensorWF core framework and domain implementations

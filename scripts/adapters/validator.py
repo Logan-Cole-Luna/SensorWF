@@ -188,9 +188,10 @@ def _check_fault_types(fault_types: Any) -> list[str]:
         if not isinstance(ft, dict):
             errors.append(f"fault_types[{i}] must be a dict, got {type(ft).__name__}")
             continue
-        for req_key in ("name", "tag"):
-            if req_key not in ft:
-                errors.append(f"fault_types[{i}] missing required key '{req_key}'")
+        if "tag" not in ft:
+            errors.append(f"fault_types[{i}] missing required key 'tag'")
+        if "description" not in ft and "name" not in ft:
+            errors.append(f"fault_types[{i}] missing 'description' (or 'name') key")
     return errors
 
 
@@ -315,20 +316,28 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Validate a SensorWF DomainAdapter")
     parser.add_argument("--adapter", required=True,
-                        choices=["ecg", "climate"],
-                        help="Built-in adapter to validate (satellite uses a bespoke runner, not a DomainAdapter subclass)")
+                        choices=["ecg", "climate", "satellite"],
+                        help="Built-in adapter to validate")
     parser.add_argument("--path", default=None,
                         help="Sample data file to pass to adapter.load()")
+    parser.add_argument("--debug-path", default=None,
+                        help="Satellite only: Debug .txt fallback file")
     args = parser.parse_args()
 
+    load_kwargs: dict = {}
     if args.adapter == "ecg":
         from scripts.adapters.ecg import ECGAdapter
         adapter: DomainAdapter = ECGAdapter()
-    else:
+    elif args.adapter == "climate":
         from scripts.adapters.climate import ClimateAdapter
         adapter = ClimateAdapter()
+    else:
+        from scripts.adapters.satellite import SatelliteAdapter
+        adapter = SatelliteAdapter()
+        if args.debug_path:
+            load_kwargs["debug_path"] = args.debug_path
 
-    ok, report = validate_adapter(adapter, sample_path=args.path)
+    ok, report = validate_adapter(adapter, sample_path=args.path, load_kwargs=load_kwargs or None)
     print_report(report)
     sys.exit(0 if ok else 1)
 

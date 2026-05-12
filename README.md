@@ -1,284 +1,311 @@
-# SatelliteAnomalyDetection
+# SensorWF — Generalizable FAIR Sensor Analytics Workflow
 
-An end-to-end telemetry analysis pipeline for the **KISPE Satellite Learning Laboratory (SLL)** CubeSat-class platform. The pipeline parses raw SCOTTI archive files, cleans and decodes the data, runs rule-based anomaly detectors, generates diagnostic plots, injects synthetic faults, and evaluates detection performance with both rule-based and ML-based methods.
+A reproducible, FAIR-compliant workflow framework for multi-domain scientific sensor time-series analysis. The core framework (M1–M5) is domain-agnostic and reusable across any sensor domain via a pluggable adapter pattern. This repository also includes an anomaly detection use case (extensions E1–E2) validated on three domains.
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Platform](#platform)
-- [Data Format](#data-format)
-- [Project Structure](#project-structure)
-- [Pipeline](#pipeline)
-- [Anomaly Detection](#anomaly-detection)
-- [Fault Injection](#fault-injection)
-- [Detection Evaluation](#detection-evaluation)
-- [Experiments](#experiments)
-- [Results](#results)
-- [Running the Pipeline](#running-the-pipeline)
+**Submitted to:** IEEE eScience 2026, Naples, September 28–October 2, 2026.
 
 ---
 
-## Overview
-
-The SLL is a ground-based flatsat testbed that mimics a CubeSat's onboard data handling (CDH) and attitude determination and control system (ADCS). Experiments run for several minutes and produce binary archive files readable by KISPE's SCOTTI software, exported as `.txt` files in two formats: **Analysis** (high-precision timestamps, key=value fields) and **Debug** (positional Plot lines, 1-second precision).
-
-This project builds a fully automated pipeline that processes those archives, characterises normal and anomalous telemetry behaviour across 18 experiment sessions, and compares four ML-based detectors against rule-based baselines.
-
----
-
-## Platform
-
-| Subsystem | Description |
-|---|---|
-| CDH | 87-field telemetry packet — temperatures, voltages, currents, timing |
-| ADCS Sensor | 30-field packet — IMU (accel/gyro/mag), wheel speed, sun sensors, magnetorquers |
-| Thermistors | 21-channel rod/bath array (hardware stuck at ~77 °C / ~74 °C) |
-| Power rails | SYS_V, PLAT_5V_V, OBC_PWR_V, COMMS_PWR_V, ADCS_5V_V, PAYLOAD_5V_V |
-| Reaction wheel | Single-axis, monitored via WHEEL_SPEED and GYRO_Z correlation |
-
----
-
-## Data Format
-
-Two archive formats are supported with automatic fallback:
-
-**Analysis files** (`*_Analysis.txt`)
-- `key = value` pairs, sub-millisecond timestamps
-- Supports both `DD/MM/YYYY` and `MM/DD/YYYY` date formats (auto-detected)
-- Preferred when non-empty
-
-**Debug files** (`*_Debug.txt`)
-- Positional `Plot` lines: `MM/DD/YYYY HH:MM:SS (CDH|ADCS Sensor) Plot <f1> <f2> …`
-- Used as fallback when the Analysis file is absent or empty
-
-Several fields are hex-encoded and decoded during cleaning:
-- Unsigned uint16: current channels (SYS_I, OBC_PWR_I, COMMS_PWR_I, etc.)
-- Signed int16 (two's complement): `WHEEL_SPEED`, `MAGNETORQUER_*`, `BATT_CHR_I`
-
----
-
-## Project Structure
+## Architecture
 
 ```
-SatelliteAnomalyDetection/
-├── main.py                  # Pipeline entry point
-├── scripts/
-│   ├── parser.py            # SCOTTI Analysis + Debug file parsers
-│   ├── cleaner.py           # Hex decoding, type coercion, stuck-sensor detection
-│   ├── injector.py          # 16-type fault injection + ML evaluation orchestration
-│   ├── evaluator.py         # ML detectors (ZScore, RobustRollingZScore, IsolationForest, Autoencoder)
-│   └── plotter.py           # Diagnostic and ML evaluation plot functions
-├── data/
-│   ├── Baseline_1/
-│   ├── AccelerometerTest/
-│   │   ├── AccelerometerTest_1/
-│   │   └── AccelerometerTest_2-6/
-│   ├── GyroTest/
-│   │   └── GyroTest_1-6/
-│   └── ThermalTest/
-│       └── ThermalTest_2-6/   (ThermalTest_1 is an empty stub — skipped)
-├── results/
-│   └── <experiment>/
-│       ├── cdh_clean.csv
-│       ├── adcs_clean.csv
-│       ├── *.png                  (general telemetry plots)
-│       ├── anomaly_detection/     (timing, ramp, correlation plots)
-│       └── injected/
-│           ├── cdh_injected_<type>_<tier>_v<n>.csv
-│           ├── adcs_injected_<type>_<tier>_v<n>.csv
-│           ├── labels_<type>_<tier>_v<n>.csv
-│           ├── injection_summary.csv
-│           ├── ml_evaluation.json
-│           ├── E2_ml_metrics_bars.png
-│           ├── E3_confusion_matrices.png
-│           └── E5_latency_distribution.png
-├── results/aggregated/
-│   ├── AGG_ml_metrics_by_family.png   (per-family mean±std grouped bars)
-│   └── AGG_if_feature_importances.png (IF feature importance heatmap by injection type)
-└── paper/
-    ├── paper.tex
-    ├── references.bib
-    └── Makefile
+Core framework (M1–M5)              Use-case extensions (E1–E2)
+─────────────────────────           ────────────────────────────
+M1  DataIngestion                   E1  FaultInjection
+M2  QualityAssessment          →    E2  AnomalyDetection
+M3  FeatureEngineering
+M4  SemanticAnnotation
+M5  ProvenanceExport
 ```
 
----
-
-## Pipeline
-
-`main.py` loops over every qualifying experiment subfolder in `data/` and runs four steps:
-
-### 1. Parse
-Reads the Analysis file if present; falls back to the Debug file if the Analysis file is absent or produces no CDH rows. Handles both `DD/MM/YYYY` and `MM/DD/YYYY` date formats automatically.
-
-### 2. Clean
-- Decodes hex-encoded uint16 and signed int16 fields
-- Coerces all numeric columns to float, drops unparseable rows
-- Deduplicates timestamps
-- Detects stuck thermistor channels (zero variance, non-zero value)
-- Derives elapsed time and estimated per-rail power
-- Exports `cdh_clean.csv` and `adcs_clean.csv`
-
-### 3. Plot
-Generates up to 20 diagnostic plots: board temperatures, power rails, current draw, timing jitter, IMU sensors, wheel speed, sun sensors, correlation heatmaps, and more. ADCS-specific plots (16–20) are only generated when the relevant sensors have active data.
-
-### 4. Inject + ML Evaluate
-Generates 2 variants per fault type (tiered `easy/medium/hard`) and evaluates all four ML detectors against them. Saves `ml_evaluation.json` and three per-experiment evaluation plots (E2 metrics bar chart, E3 confusion matrices, E5 latency distribution). After all experiments, writes aggregated cross-family comparison plots to `results/aggregated/`.
+The five core modules are reusable across any sensor domain. Extensions E1 and E2 implement synthetic fault injection and ML-based anomaly detection for demonstration purposes — they are not part of the reusable core and are run separately via `use_cases/`.
 
 ---
 
-## Anomaly Detection
+## Validated Domains
 
-Four ML detectors defined in [scripts/evaluator.py](scripts/evaluator.py):
-
-| Detector | Method | Architecture |
-|---|---|---|
-| ZScore | Hybrid z-score + modified z-score (MAD-based robust variant) | Parametric robust statistics |
-| RobustRollingZScore | Rolling median/MAD detector with persistence and CUSUM-style drift sensitivity | Robust streaming detector |
-| IsolationForest | Rotation-ensemble Isolation Forest (EIF-inspired) with PCA + feature subsampling | Ensemble of Isolation Forests |
-| Autoencoder | Multi-scale denoising sequence autoencoder ensemble | MLP reconstruction on overlapping temporal windows |
-
-### Literature-Based Method Updates (April 2026)
-
-The evaluator was updated to align each detector with modern anomaly-detection literature.
-
-`ZScore` / robust statistical baseline updates:
-- Added modified z-score (median + MAD) fusion with classic z-score to improve heavy-tail robustness.
-- Citations:
-    - Iglewicz, B., Hoaglin, D. C. *How to Detect and Handle Outliers*, 1993.
-    - Rousseeuw, P. J., Croux, C. *Alternatives to the Median Absolute Deviation*, JASA 1993. DOI: 10.1080/01621459.1993.10476408
-    - NIST/SEMATECH e-Handbook: modified z-score and outlier detection guidance.
-
-`RobustRollingZScore` updates:
-- Kept rolling median/MAD and persistence rules, and added bounded CUSUM-style persistence boosting for small sustained shifts.
-- Citations:
-    - Hampel, F. R. *The Influence Curve and Its Role in Robust Estimation*, 1974.
-    - Page, E. S. *Continuous Inspection Schemes* (CUSUM), Biometrika 1954. DOI: 10.1093/biomet/41.1-2.100
-    - Iglewicz & Hoaglin (1993), robust modified z-score thresholds.
-
-`IsolationForest` updates:
-- Implemented a random-rotation ensemble over reduced feature space to reduce axis-alignment artifacts (EIF-inspired).
-- Citations:
-    - Liu, F. T., Ting, K. M., Zhou, Z.-H. *Isolation Forest*, ICDM 2008. DOI: 10.1109/ICDM.2008.17
-    - Hariri, S., Carrasco Kind, M., Brunner, R. J. *Extended Isolation Forest*, TKDE 2021. DOI: 10.1109/TKDE.2019.2947676
-
-`Autoencoder` updates:
-- Switched to multi-scale temporal window ensembling with denoising training noise to improve robustness across anomaly durations.
-- Citations:
-    - Malhotra, P. et al. *LSTM-based Encoder-Decoder for Multi-sensor Anomaly Detection*, 2016. arXiv:1607.00148
-    - Hundman, K. et al. *Detecting Spacecraft Anomalies Using LSTMs and Nonparametric Dynamic Thresholding*, KDD 2018. DOI: 10.1145/3219819.3219845
-    - Zhang, C. et al. *MSCRED: Unsupervised Anomaly Detection and Diagnosis in Multivariate Time Series*, 2018. arXiv:1811.08055
-
-All detectors are trained on the first 60% of the clean session, with the score threshold set at the 99th percentile of training scores. Features include raw telemetry channels, first-order differences, and rolling mean/std (when session ≥ 45 rows).
-
-Key findings from baseline characterisation:
-- **Universal OBDH thermal ramp**: all 18 sessions show 0.7–2.0 °C/min with R² > 0.79 — a systemic enclosure heating effect
-- **21 stuck thermistors**: rod array at ~77.18 °C, bath at ~74.31 °C — confirmed hardware freeze
-- **ADCS all-zero in non-ADCS experiments**: ADCS powered off during Baseline and ThermalTest sessions; active only in AccelerometerTest and GyroTest
-- **Voltage rail noise**: SYS_V, PLAT_5V_V, OBC_PWR_V show regular switching transients
+| Domain | Dataset | Sessions | Best AUC-ROC / AUC-PR |
+|--------|---------|----------|----------------------|
+| Satellite telemetry | KISPE SATLL (4 families) | 4 | AE = 0.704 / 0.498 |
+| Biomedical ECG | MIT-BIH Arrhythmia DB (20 records) | 20 | LOF = 0.884 / 0.788 |
+| Atmospheric climate | Jena Climate 2009–2015 (7 years) | 7 | AE = 0.801 / 0.658 |
 
 ---
 
-## Fault Injection
+## Quick Start
 
-16 synthetic fault types (+2 compound) defined in [scripts/injector.py](scripts/injector.py):
-
-| Class | ID | Description | Target |
-|---|---|---|---|
-| Thermal | T1_obdh_runaway | Runaway nonlinear thermal ramp (contextual/collective) | CDH |
-| Thermal | T2_board_thermal_shock | Step-hold-decay thermal transient | CDH |
-| Thermal | T3_thermal_bias_divergence | Bias divergence between correlated thermal channels | CDH |
-| Power | P1_bus_sag_recovery | Bus sag with coupled current response and recovery | CDH |
-| Power | P2_switching_noise_burst | High-frequency ripple + impulsive switching noise | CDH |
-| Power | P3_rail_latchup | Rail latch-up / stuck-high regime | CDH |
-| ADCS | A1_accel_packet_dropout | Intermittent accelerometer sample dropout | ADCS |
-| ADCS | A2_gyro_clipping | Axis clipping/saturation with contextual bias | ADCS |
-| ADCS | A3_mag_field_inversion | Magnetometer polarity inversion + offset | ADCS |
-| ADCS | A4_imu_correlation_break | Cross-sensor temporal/correlation consistency break | ADCS |
-| ADCS | A5_sun_sensor_blinding | Partial/full sun-sensor blinding and saturation | ADCS |
-| Wheel | W1_wheel_runaway | Wheel runaway ramp with oscillatory instability | ADCS |
-| Wheel | W2_wheel_stiction_stop | Abrupt deceleration, stiction hold, degraded recovery | ADCS |
-| Timing | C1_packet_gap_jitter | Packet removal plus boundary jitter in elapsed time | CDH |
-| Comms | C2_rssi_fade | Sustained RSSI fading random walk | CDH |
-| Comms | C3_frame_error_avalanche | Accelerating frame-error burst process | CDH |
-| Compound | COMPOUND_thermal_power_fault | T1 + P1 simultaneously | CDH |
-| Compound | COMPOUND_adcs_power_fault | A4 + P3 simultaneously | CDH + ADCS |
-
-Each injection picks a random contextual window (seeded for reproducibility), supports `easy/medium/hard` tiers, and produces a label record containing `anomaly_type`, `start_idx`, `end_idx`, `severity`, and `affected_channels`.
-
-The redesign is literature-driven. See `documentation/Tutorials/LiteratureDrivenInjection.md` for citations and mapping from paper guidance to implemented anomaly morphology.
-
----
-
-## Detection Evaluation
-
-ML detectors are trained on the first 60% of the clean session and scored against the full injected dataset. The anomaly threshold is set at the 99th percentile of training-set scores (calibrated on clean data only). Performance is measured at this threshold (Accuracy, FPR, Recall, F1) plus AUC-ROC.
-
----
-
-## Experiments
-
-Configured window: runs 2-6 (5 runs per family) across four experiment families:
-
-| Family | Sessions | CDH packets | ADCS active |
-|---|---|---|---|
-| AccelerometerTest | 5 (runs 2-6) | 300–390 | Yes |
-| GyroTest | 5 (runs 2-6) | 180–370 | Yes |
-| ReactionWheelTest | 5 (runs 2-6) | 200–330 | Yes |
-| ThermalTest | 5 (runs 2–6) | 3000–5000 | No |
-
-Baseline_2-6 are not present in the current dataset, so Baseline is excluded when
-enforcing the 2-6 run window.
-
----
-
-## Results
-
-### ML Detector Performance (latest full rerun, tiered injections; four detector families)
-
-| Detector | Accuracy | FPR | Recall | F1 | AUC-ROC |
-|---|---|---|---|---|---|
-| ZScore | 0.733 | 0.057 | 0.109 | 0.105 | 0.585 |
-| RobustRollingZScore | 0.629 | 0.254 | 0.282 | 0.140 | 0.533 |
-| IsolationForest | 0.734 | 0.125 | 0.225 | 0.190 | 0.571 |
-| **Autoencoder** | **0.743** | 0.183 | **0.485** | **0.356** | **0.683** |
-
-Tier-level mean accuracy across detectors in the latest rerun:
-
-| Tier | Mean Accuracy |
-|---|---|
-| Easy | 0.795 |
-| Medium | 0.704 |
-| Hard | 0.630 |
-
-Family-level easy-tier mean accuracy:
-
-| Family | Easy Accuracy |
-|---|---|
-| AccelerometerTest | 0.855 |
-| GyroTest | 0.819 |
-| ReactionWheelTest | 0.860 |
-| ThermalTest | 0.648 |
-
-Autoencoder currently has the strongest overall recall/F1, while ZScore and IsolationForest provide stronger easy-tier accuracy in the non-thermal families. Thermal remains the hardest family due to long sessions and subtle drift-like faults.
-
-All results are written to `results/<experiment>/`. Each experiment produces `cdh_clean.csv`, `adcs_clean.csv`, up to 20 `.png` plots, and an `injected/` directory with 32 labelled variants, `ml_evaluation.json`, and three evaluation plots (E2 metrics bar chart, E3 confusion matrices, E5 latency distribution). Cross-family aggregated plots are written to `results/aggregated/`.
-
----
-
-## Running the Pipeline
-
-**Requirements**: Python 3.11+, numpy, pandas, scipy, matplotlib, seaborn, scikit-learn
+### Prerequisites
 
 ```bash
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-pip install numpy pandas scipy matplotlib seaborn scikit-learn
-
-# Run the full pipeline
-python main.py
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-The pipeline auto-discovers all qualifying experiment subfolders under `data/`, enforces the 2-6 run window, aggregates by family, and writes all results to `results/`.
+### Run the core pipeline (all three domains)
+
+```bash
+python use_case.py               # runs satellite + ECG + climate cores
+```
+
+Or run a single domain:
+
+```bash
+python run_sat.py                # satellite: M1-M5
+python run_ecg.py                # ECG: M1-M5
+python run_climate.py            # climate: M1-M5
+```
+
+### Run the anomaly detection use case (after core)
+
+```bash
+python use_cases/sat_anomaly.py      # satellite E1+E2
+python use_cases/ecg_anomaly.py      # ECG E1+E2
+python use_cases/climate_anomaly.py  # climate E1+E2
+```
+
+### Generate the HTML run report
+
+After running a domain pipeline, produce a self-contained report and open it in your browser:
+
+```bash
+python -m scripts.utils.html_report --results-dir results/satellite
+python -m scripts.utils.html_report --results-dir results/ECG     --domain ecg
+python -m scripts.utils.html_report --results-dir results/Climate --domain climate
+```
+
+### Export to CWL (Common Workflow Language)
+
+```bash
+python -m scripts.utils.cwl_export                # generates cwl/workflow.cwl + tool stubs
+python -m scripts.utils.cwl_export --core-only    # M1-M5 only
+```
+
+### Validate an adapter before running
+
+```bash
+python -m scripts.adapters.validator --adapter ecg     --path data/ECG/100.csv
+python -m scripts.adapters.validator --adapter climate --path data/Climate/jena_climate_2009_2016.csv
+```
+
+### CLI options
+
+```bash
+# Satellite: restrict to specific experiment families
+python run_sat.py --families AccelerometerTest GyroTest
+
+# ECG: restrict to specific records
+python run_ecg.py --records 100 106 108
+
+# Climate: restrict to specific years
+python run_climate.py --years 2011 2012 2013
+
+# Anomaly use case: fast mode (easy tier only)
+python use_cases/sat_anomaly.py --fast
+python use_cases/sat_anomaly.py --n-variants 1 --seed 0
+```
+
+---
+
+## Output Structure
+
+```
+results/
+  satellite/
+    AccelerometerTest/
+      cdh_clean.csv          # M1 output: cleaned telemetry
+      adcs_clean.csv
+      detection_report.json  # M2 quality report
+      *.png                  # telemetry visualisations
+      injected/              # E1+E2 outputs
+        injection_summary.csv
+        ml_evaluation.json
+        ml_metrics_by_tier.csv
+    semantic/                # M4 knowledge graph
+      if_ontology_graph.ttl
+      if_ontology_graph.graphml
+      if_ontology_nodes.csv
+      if_ontology_edges.csv
+      if_interpretability_report.md
+    workflow_spec.ttl        # M5: static ProvONE workflow spec
+    provenance.ttl           # M5: runtime PROV-O trace with SHA-256 checksums
+    run_report.html          # self-contained HTML run report
+
+  ECG/mitdb/record_100/
+    signal_clean.csv
+    quality_report.json
+    semantic/
+
+  Climate/jena/2011_M01_M06/
+    signal_clean.csv
+    quality_report.json
+    semantic/
+
+  figures/                   # cross-domain publication figures
+  ablation/                  # M3 window-sensitivity ablation results
+  ontologies/
+    satellitesystem.owl
+    ecg.owl
+    climate.owl
+
+cwl/                         # CWL export
+  workflow.cwl
+  tools/M1.cwl ... tools/E2.cwl
+```
+
+---
+
+## Adapting to a New Domain
+
+To apply SensorWF to a new sensor domain, implement a `DomainAdapter` subclass:
+
+```python
+# scripts/adapters/my_domain.py
+from scripts.adapters.base import DomainAdapter
+import pandas as pd
+
+class MyDomainAdapter(DomainAdapter):
+    name     = "My Domain"
+    channels = ["channel_a", "channel_b", "channel_c"]
+    native_hz = 1.0
+
+    def load(self, path: str, **kwargs) -> pd.DataFrame:
+        # Return DataFrame with columns: timestamp, elapsed_s, <channels>
+        ...
+
+    def get_quality_config(self) -> dict:
+        return {
+            "stuck_unique_max": 3,
+            "zscore_threshold": 3.0,
+            "expected_dt_s": 1.0,
+            "gap_multiplier": 5.0,
+            "trend_channels": ["channel_a"],
+        }
+
+    def get_feature_config(self) -> dict:
+        return {"window": 15, "channels": None}
+
+    def get_ontology_path(self) -> str:
+        return "results/ontologies/my_domain.owl"
+
+    def get_fault_types(self) -> list[dict]:
+        return [{"tag": "spike", "description": "Amplitude Spike", ...}]
+```
+
+Validate before running:
+
+```python
+from scripts.adapters.validator import validate_adapter
+ok, report = validate_adapter(MyDomainAdapter(), sample_path="path/to/data.csv")
+```
+
+Then create a `run_my_domain.py` entry point following the pattern in `run_ecg.py`, `run_climate.py`, or `run_sat.py`.
+
+Three adapters are already provided:
+
+| Adapter | Module | Domain |
+|---------|--------|--------|
+| `SatelliteAdapter` | `scripts/adapters/satellite.py` | KISPE SATLL SCOTTI v2 (merges CDH + ADCS) |
+| `ECGAdapter` | `scripts/adapters/ecg.py` | MIT-BIH Arrhythmia Database |
+| `ClimateAdapter` | `scripts/adapters/climate.py` | Jena Climate Dataset |
+
+---
+
+## Module Reference
+
+### Core modules
+
+| ID | Name | Script | Description |
+|----|------|--------|-------------|
+| M1 | DataIngestion | `scripts/adapters/` | Parse raw sensor archive via DomainAdapter |
+| M2 | QualityAssessment | `scripts/pipeline_core.py` | NaN, stuck-channel, timing, z-score audit |
+| M3 | FeatureEngineering | `scripts/pipeline_core.py` | 9-feature-family matrix per channel (raw, diff, rolling mean/std/skew/kurt, ZCR, spectral entropy, dominant frequency) |
+| M4 | SemanticAnnotation | `scripts/satellite/semantic_kg.py` | Ontology-linked knowledge graph (RDF/Turtle + GraphML); multi-detector performance nodes |
+| M5 | ProvenanceExport | `scripts/provenance_recorder.py` | PROV-O/ProvONE trace with SHA-256 file checksums |
+
+### Extension modules (anomaly detection use case only)
+
+| ID | Name | Script | Description |
+|----|------|--------|-------------|
+| E1 | FaultInjection | `scripts/utils/injector.py` | Synthetic fault injection, 3-tier difficulty |
+| E2 | AnomalyDetection | `scripts/evaluator.py` | 5 ML detectors with EVT threshold calibration |
+
+**E2 detectors:** ZScore, RobustRollingZScore, IsolationForest (rotation ensemble), Autoencoder (multi-scale MLP), LOF (density-based novelty with EVT thresholding).
+
+---
+
+## Feature Engineering (M3)
+
+When a session has at least `3 × window` samples, M3 computes nine feature families per channel:
+
+| # | Feature | Symbol | Notes |
+|---|---------|--------|-------|
+| 1 | Raw value | `{c}` | |
+| 2 | First-order difference | `d_{c}` | Rate of change |
+| 3 | Rolling mean | `rm_{c}` | Window = domain-specific |
+| 4 | Rolling std | `rs_{c}` | |
+| 5 | Rolling skewness | `sk_{c}` | Distribution asymmetry |
+| 6 | Rolling excess kurtosis | `ku_{c}` | Tail heaviness |
+| 7 | Zero-crossing rate | `zcr_{c}` | Relative to channel mean |
+| 8 | Spectral entropy | `se_{c}` | Shannon entropy of power spectrum |
+| 9 | Dominant frequency (Hz) | `df_{c}` | Peak frequency excluding DC |
+
+Plus one timing feature: `dt_sample` (sample interval in seconds).
+
+Default window sizes: ECG = 100 samples, Climate = 24 samples, Satellite = 15 samples.
+
+---
+
+## Provenance and FAIR Compliance
+
+Every run produces two provenance artifacts:
+
+- **`workflow_spec.ttl`** — static ProvONE program graph describing module ports, assumptions, and data flows.
+- **`provenance.ttl`** — runtime PROV-O trace with per-module wall-clock times, row counts, file paths, and SHA-256 checksums for all output files.
+
+The component registry (`components.json`) lists all modules with their semantic contracts, enabling automated discovery and reuse. A CWL export (`cwl/workflow.cwl`) provides interoperability with CWL-compatible workflow engines.
+
+---
+
+## Repository Structure
+
+```
+run_sat.py          Entry point: satellite core pipeline (M1-M5)
+run_ecg.py          Entry point: ECG core pipeline (M1-M5)
+run_climate.py      Entry point: climate core pipeline (M1-M5)
+use_case.py         Dispatcher: run one or all domain cores
+use_cases/
+  sat_anomaly.py    Satellite anomaly detection (E1+E2)
+  ecg_anomaly.py    ECG anomaly detection (E1+E2)
+  climate_anomaly.py Climate anomaly detection (E1+E2)
+scripts/
+  pipeline_core.py        Domain-agnostic M2/M3 logic (shared feature helpers)
+  evaluator.py            Feature engineering + 5 ML detectors (M3, E2)
+  provenance_recorder.py  Runtime PROV-O recorder with SHA-256 (M5)
+  workflow.py             Static module registry and ProvONE spec emitter
+  adapters/               DomainAdapter base class + all three domain adapters
+    base.py               Abstract DomainAdapter interface
+    satellite.py          KISPE SATLL adapter (merges CDH+ADCS; M1 for satellite)
+    ecg.py                MIT-BIH ECG adapter
+    climate.py            Jena Climate adapter
+    validator.py          Pre-run schema validation harness
+  satellite/              Satellite-specific internals (used by SatelliteAdapter + E1/E2)
+    parser.py             SCOTTI archive parser (internal to SatelliteAdapter.load)
+    cleaner.py            CDH/ADCS hex-decoding and cleaning (internal to SatelliteAdapter.load)
+    detector.py           Satellite-specific supplementary quality checks (beyond generic M2)
+    plotter.py            Telemetry visualisation utility
+    ontology.py           Satellite OWL ontology generator (runtime, channel-grounded)
+    semantic_kg.py        M4 knowledge graph with multi-detector aggregation (post-E2)
+    plot_kg.py            Knowledge graph visualisation utility
+  utils/                  Framework-level utilities (domain-agnostic)
+    injector.py           Fault injection logic (E1)
+    ablation_window.py    M3 window-size ablation study
+    figures.py            Publication figure generators
+    html_report.py        Academic-style HTML run report generator
+    cwl_export.py         CWL workflow export from components.json
+components.json     Machine-readable module registry (FAIR)
+cwl/                CWL export (generated)
+data/               Raw sensor archives (not tracked in git)
+results/            Pipeline outputs (not tracked in git)
+documentation/
+  EScienceV2/paper.tex  Paper source (IEEE eScience 2026)
+```

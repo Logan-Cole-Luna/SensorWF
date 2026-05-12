@@ -741,7 +741,7 @@ def run_injections(
             save_ml_results,
             save_ml_tier_metrics,
         )
-        from scripts.utils.plotter import plot_all_ml_evaluation
+        from scripts.satellite.plotter import plot_all_ml_evaluation
 
         print("        Running ML evaluation (ZScore / RobustRollingZScore / IsoForest / Autoencoder) ...")
         ml_results = run_ml_evaluation(injected_dir, files_generated, cdh, adcs)
