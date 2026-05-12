@@ -45,6 +45,7 @@ References
 
 from __future__ import annotations
 
+import hashlib
 import os
 import socket
 import platform
@@ -330,6 +331,11 @@ class ProvenanceRecorder:
         ]
 
         if isinstance(val, dict):
+            path_val = val.get("path")
+            if isinstance(path_val, str):
+                digest = _sha256_file(path_val)
+                if digest:
+                    lines.append(f'    telwf:sha256 "{digest}" ;')
             for k, v in val.items():
                 if v is None:
                     continue
@@ -397,6 +403,20 @@ def _fmt(dt: datetime) -> str:
 
 def _esc(s: str) -> str:
     return str(s).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _sha256_file(path: str) -> str | None:
+    """Return hex SHA-256 digest for a file, or None if path is not a regular file."""
+    try:
+        if not os.path.isfile(path):
+            return None
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
 
 
 _PROV_HEADER = """\

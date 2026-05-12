@@ -70,7 +70,7 @@ def _prep(edges: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--semantic-dir", default="results/semantic")
+    ap.add_argument("--semantic-dir", default=os.path.join("results", "satellite", "semantic"))
     ap.add_argument("--pub-top-k", type=int, default=40)
     ap.add_argument("--pub-edge-quantile", type=float, default=0.75)
     args = ap.parse_args()

@@ -756,8 +756,7 @@ def run_all_plots(cdh: pd.DataFrame, adcs: pd.DataFrame, output_dir: str) -> lis
         ("21 Comms link health",          lambda: plot_comms_link_health(cdh, output_dir)),
     ]
 
-    for label, fn in steps:
-        print(f"  Plotting {label} …")
+    for _, fn in steps:
         paths.append(fn())
 
     # ── ADCS-specific plots ────────────────────────────────────────────────────
@@ -769,25 +768,20 @@ def run_all_plots(cdh: pd.DataFrame, adcs: pd.DataFrame, output_dir: str) -> lis
         and any(adcs[c].abs().max() > 0 for c in imu_cols if c in adcs.columns)
     )
     if has_imu:
-        print("  Plotting 16 IMU sensors …")
         paths.append(plot_imu_sensors(adcs, output_dir))
-        print("  Plotting 17 IMU magnitudes …")
         paths.append(plot_imu_magnitudes(adcs, output_dir))
 
     if (not adcs.empty and "WHEEL_SPEED" in adcs.columns
             and adcs["WHEEL_SPEED"].dropna().abs().max() > 0):
-        print("  Plotting 18 Wheel speed …")
         paths.append(plot_wheel_speed(adcs, output_dir))
 
     sun_cols = [c for c in adcs.columns if c.startswith("SUN_SENSOR_")] if not adcs.empty else []
     if sun_cols and any(adcs[c].abs().max() > 0 for c in sun_cols):
-        print("  Plotting 19 Sun sensors …")
         paths.append(plot_sun_sensors(adcs, output_dir))
 
     mtq_cols = ["MAGNETORQUER_X", "MAGNETORQUER_Y", "MAGNETORQUER_Z"]
     if (not adcs.empty and any(c in adcs.columns for c in mtq_cols)
             and any(adcs[c].abs().max() > 0 for c in mtq_cols if c in adcs.columns)):
-        print("  Plotting 20 Magnetorquer …")
         paths.append(plot_magnetorquer(adcs, output_dir))
 
     return paths

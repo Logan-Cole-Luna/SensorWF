@@ -158,7 +158,7 @@ class ECGAdapter(DomainAdapter):
         }
 
     def get_ontology_path(self) -> str:
-        return os.path.join("ontologies", "ecg.owl")
+        return os.path.join("results", "ontologies", "ecg.owl")
 
     def get_fault_types(self) -> list[dict]:
         return [

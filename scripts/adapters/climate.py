@@ -126,7 +126,7 @@ class ClimateAdapter(DomainAdapter):
         }
 
     def get_ontology_path(self) -> str:
-        return os.path.join("ontologies", "climate.owl")
+        return os.path.join("results", "ontologies", "climate.owl")
 
     def get_fault_types(self) -> list[dict]:
         return [

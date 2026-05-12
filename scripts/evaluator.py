@@ -1,18 +1,28 @@
 """
 evaluator.py — ML-based anomaly detection and performance evaluation.
 
-Three detectors
-───────────────
-  ZScoreDetector          Baseline — per-feature z-scores; anomaly score = max |z|
-  IsolationForestDetector Advanced — sklearn IsolationForest; multivariate
-                          Exposes feature_importances_ from tree structure.
-  AutoencoderDetector     Advanced — MLP reconstruction-error autoencoder (sklearn)
-                          Symmetric bottleneck: n → n//2 → n//4 → n//2 → n
+Five detectors
+──────────────
+  ZScoreDetector           Baseline — per-feature z-scores; anomaly score = max |z|
+  RobustRollingZScore      Baseline — CUSUM-style rolling MAD z-score
+  IsolationForestDetector  Advanced — sklearn IsolationForest (rotation ensemble)
+                           Exposes feature_importances_ from tree structure.
+  AutoencoderDetector      Advanced — MLP reconstruction-error autoencoder (sklearn)
+                           Symmetric bottleneck: n → n//2 → n//4 → n//2 → n
+  LOFDetector              Advanced — Local Outlier Factor (novelty mode, EVT threshold)
 
-Features
-────────
-  Raw channel values + first-order differences (rate-of-change) per channel.
-  Rolling mean and std (window=15) added when session is long enough (≥45 rows).
+Features (9 per channel when session >= 3x window)
+───────────────────────────────────────────────────
+  1.  Raw value
+  2.  First-order difference  (d_{c})
+  3.  Rolling mean            (rm_{c})
+  4.  Rolling std             (rs_{c})
+  5.  Rolling skewness        (sk_{c})
+  6.  Rolling excess kurtosis (ku_{c})
+  7.  Zero-crossing rate      (zcr_{c})
+  8.  Spectral entropy        (se_{c})
+  9.  Dominant frequency (Hz) (df_{c})
+  +   Sample-interval timing  (dt_sample)
 
 Threshold
 ─────────
@@ -40,10 +50,14 @@ import numpy as np
 import pandas as pd
 
 from sklearn.ensemble        import IsolationForest
+from sklearn.neighbors       import LocalOutlierFactor
 from sklearn.neural_network  import MLPRegressor
 from sklearn.preprocessing   import StandardScaler
-from sklearn.metrics         import roc_auc_score
+from sklearn.metrics         import roc_auc_score, average_precision_score
 from sklearn.decomposition   import PCA
+from scipy.stats             import genpareto
+
+from scripts.pipeline_core import compute_extended_features, _estimate_sample_hz
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -118,7 +132,7 @@ def build_feature_matrix(
             arrays.append(dt_rs[:, None])
             names += ["rm_dt_packet", "rs_dt_packet"]
 
-    # Rolling statistics (only when session is long enough)
+    # Rolling statistics + extended spectral/statistical features
     if len(df) >= _ROLL_WINDOW * 3:
         rm = raw.rolling(_ROLL_WINDOW, min_periods=1).mean().to_numpy()
         rs = raw.rolling(_ROLL_WINDOW, min_periods=1).std().fillna(0.0).to_numpy()
@@ -126,6 +140,11 @@ def build_feature_matrix(
         arrays.append(rs)
         names += [f"rm_{c}" for c in cols]
         names += [f"rs_{c}" for c in cols]
+
+        hz = _estimate_sample_hz(df)
+        ext_arrays, ext_names = compute_extended_features(raw, cols, _ROLL_WINDOW, hz)
+        arrays.extend(ext_arrays)
+        names.extend(ext_names)
 
     X = np.concatenate(arrays, axis=1)
     return X, names
@@ -545,6 +564,96 @@ class AutoencoderDetector:
         return np.repeat(s[:, None], X.shape[1], axis=1)
 
 
+class LOFDetector:
+    """
+    Local Outlier Factor (LOF) novelty detector — density-based baseline.
+
+    Uses sklearn's LOF with novelty=True so that fit() learns on clean training
+    data and score_samples() can be called on unseen (injected) test data.
+    PCA pre-processing keeps the neighbourhood graph tractable in high dims.
+    Cited as representative of density-based unsupervised anomaly detection.
+    """
+
+    def __init__(self, n_neighbors: int = 20, contamination: float = 0.05,
+                 max_features: int = 32, pca_variance: float = 0.95):
+        self._scaler       = StandardScaler()
+        self._n_neighbors  = int(n_neighbors)
+        self._contamination = float(contamination)
+        self._max_features = int(max_features)
+        self._pca_variance = float(pca_variance)
+        self._pca: PCA | None = None
+        self._feature_idx: np.ndarray | None = None
+        self._lof: LocalOutlierFactor | None = None
+        self.feature_names_: list[str] = []
+
+    def fit(self, X: np.ndarray, feature_names: list[str] | None = None) -> "LOFDetector":
+        self.feature_names_ = feature_names or []
+        var = np.var(X, axis=0)
+        idx = np.argsort(var)[::-1]
+        keep = idx[: min(len(idx), self._max_features)]
+        self._feature_idx = np.sort(keep)
+        Xs = self._scaler.fit_transform(X[:, self._feature_idx])
+
+        if Xs.shape[1] >= 8 and np.isfinite(Xs).all() and float(np.var(Xs, axis=0).sum()) > 1e-10:
+            self._pca = PCA(n_components=self._pca_variance, svd_solver="full", random_state=42)
+            Xf = self._pca.fit_transform(Xs)
+            if not (np.isfinite(Xf).all() and Xf.shape[1] > 0):
+                self._pca = None
+                Xf = Xs
+        else:
+            self._pca = None
+            Xf = Xs
+
+        n_neigh = min(self._n_neighbors, max(2, len(Xf) - 1))
+        self._lof = LocalOutlierFactor(
+            n_neighbors=n_neigh,
+            contamination=self._contamination,
+            novelty=True,
+            n_jobs=-1,
+        )
+        self._lof.fit(Xf)
+        return self
+
+    def score(self, X: np.ndarray) -> np.ndarray:
+        if self._lof is None or self._feature_idx is None:
+            raise RuntimeError("Call fit() first.")
+        Xs = self._scaler.transform(X[:, self._feature_idx])
+        Xf = self._pca.transform(Xs) if self._pca is not None else Xs
+        return -self._lof.score_samples(Xf)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EVT threshold fitting
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fit_evt_threshold(scores: np.ndarray, pre_pct: float = 90.0,
+                       exceedance_prob: float = 0.01) -> float:
+    """
+    Peaks-over-Threshold (POT) extreme value threshold using GPD tail fitting.
+
+    Fits a Generalized Pareto Distribution to the tail of training anomaly
+    scores above `pre_pct` percentile, then returns the return level for
+    `exceedance_prob` probability. Falls back to percentile if GPD fitting fails.
+    """
+    u = float(np.percentile(scores, pre_pct))
+    exceedances = scores[scores > u] - u
+    if len(exceedances) < 10:
+        return float(np.percentile(scores, 99.0))
+    try:
+        c, loc, scale = genpareto.fit(exceedances, floc=0)
+        n_total = len(scores)
+        n_exc   = len(exceedances)
+        # Return level: u + GPD quantile at (1 - exceedance_prob * n_total / n_exc)
+        p_gpd = 1.0 - (exceedance_prob * n_total / n_exc)
+        p_gpd = float(np.clip(p_gpd, 0.0, 0.9999))
+        thr = float(u + genpareto.ppf(p_gpd, c=c, loc=loc, scale=scale))
+        if not np.isfinite(thr) or thr < u:
+            return float(np.percentile(scores, 99.0))
+        return thr
+    except Exception:
+        return float(np.percentile(scores, 99.0))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Evaluation metrics
 # ─────────────────────────────────────────────────────────────────────────────
@@ -599,24 +708,35 @@ def evaluate_detector(
         if len(tp_after) > 0:
             latency_s = float(elapsed_s[tp_after[0]] - elapsed_s[first_anom])
 
-    # Threshold-free AUC-ROC
+    # Threshold-free AUC-ROC and AUC-PR (reflects class imbalance)
     if labels.sum() > 0 and (~labels).sum() > 0:
         try:
             auc = float(roc_auc_score(labels.astype(int), scores))
         except Exception:
             auc = 0.5
+        try:
+            auc_pr = float(average_precision_score(labels.astype(int), scores))
+        except Exception:
+            auc_pr = float(labels.mean())
     else:
         auc = 0.5
+        auc_pr = float(labels.mean()) if len(labels) > 0 else 0.0
+
+    # Event-level metric: was the anomaly interval detected by at least one TP?
+    anomaly_idxs_all = np.where(labels)[0]
+    event_detected = bool((preds & labels).any()) if len(anomaly_idxs_all) > 0 else False
 
     return {
-        "accuracy":   round(accuracy,  4),
-        "fpr":        round(fpr,       4),
-        "precision":  round(precision, 4),
-        "recall":     round(recall,    4),
-        "f1":         round(f1,        4),
-        "latency_s":  round(latency_s, 3) if latency_s is not None else None,
-        "auc_roc":    round(auc,       4),
-        "threshold":  round(thr,       6),
+        "accuracy":       round(accuracy,  4),
+        "fpr":            round(fpr,       4),
+        "precision":      round(precision, 4),
+        "recall":         round(recall,    4),
+        "f1":             round(f1,        4),
+        "latency_s":      round(latency_s, 3) if latency_s is not None else None,
+        "auc_roc":        round(auc,       4),
+        "auc_pr":         round(auc_pr,    4),
+        "event_detected": event_detected,
+        "threshold":      round(thr,       6),
         "tp": tp, "tn": tn, "fp": fp, "fn": fn,
     }
 
@@ -630,6 +750,7 @@ _DETECTORS: list[str] = [
     "RobustRollingZScore",
     "IsolationForest",
     "Autoencoder",
+    "LOF",
 ]
 
 _TRAIN_FRAC = 0.60   # fraction of clean session used for training
@@ -676,22 +797,34 @@ def _threshold_percentile(detector: str, family: str, target: str, tag: str) -> 
         p = 99.0 if "thermal" in fam else 98.4
         if tag.startswith(("C1", "C2", "C3", "A5")):
             p -= 0.5
+    elif detector == "LOF":
+        p = 97.5  # LOF scores have heavier tails; slightly lower percentile
 
     if target == "adcs":
         p -= 0.2
     return float(np.clip(p, 95.0, 99.7))
 
 
-def _fit_threshold(detector, X_train: np.ndarray, pct: float) -> float:
+def _fit_threshold(detector, X_train: np.ndarray, pct: float,
+                   use_evt: bool = False) -> float:
+    """
+    Calibrate decision threshold from clean training scores.
+
+    use_evt=True applies Peaks-over-Threshold extreme value theory fitting
+    to the tail of training scores. Falls back to percentile on failure.
+    """
     n = len(X_train)
     if n < 20:
-        return float(np.percentile(detector.score(X_train), pct))
+        s = detector.score(X_train)
+        return _fit_evt_threshold(s) if use_evt else float(np.percentile(s, pct))
     split = max(10, int(n * 0.8))
-    X_fit = X_train[:split]
     X_val = X_train[split:] if split < n else X_train
     if len(X_val) < 5:
-        X_val = X_fit
-    return float(np.percentile(detector.score(X_val), pct))
+        X_val = X_train
+    s = detector.score(X_val)
+    if use_evt:
+        return _fit_evt_threshold(s)
+    return float(np.percentile(s, pct))
 
 
 def run_ml_evaluation(
@@ -872,6 +1005,10 @@ def run_ml_evaluation(
                         detector = IsolationForestDetector(
                             contamination=det_cfg["contamination"]
                         )
+                    elif det_name == "LOF":
+                        detector = LOFDetector(
+                            contamination=det_cfg["contamination"]
+                        )
                     else:
                         detector = AutoencoderDetector(
                             seq_len=det_cfg["seq_len"],
@@ -879,7 +1016,8 @@ def run_ml_evaluation(
                         )
                     detector.fit(X_tr, fnames)
                     train_scores = detector.score(X_tr)
-                    thr_val = _fit_threshold(detector, X_tr, thr_pct)
+                    use_evt = (det_name in ("IsolationForest", "LOF"))
+                    thr_val = _fit_threshold(detector, X_tr, thr_pct, use_evt=use_evt)
                     fit_cache[cache_key] = (detector, train_scores, thr_val)
 
                 scores       = detector.score(X_inj)
@@ -992,7 +1130,11 @@ def save_ml_tier_metrics(ml_results: list[dict], output_dir: str) -> str:
     if "tier" not in df.columns:
         df["tier"] = "unknown"
 
-    metrics = ["accuracy", "fpr", "recall", "f1", "auc_roc"]
+    metrics = ["accuracy", "fpr", "recall", "f1", "auc_roc", "auc_pr"]
+    # event_detected is boolean; mean = event detection rate
+    if "event_detected" in df.columns:
+        df["event_rate"] = df["event_detected"].astype(float)
+        metrics.append("event_rate")
     by_tier = (df.groupby(["tier", "detector"])[metrics]
                  .mean()
                  .reset_index())
@@ -1051,7 +1193,7 @@ def print_ml_summary(ml_results: list[dict]) -> None:
           f"{'F1':>7}  {'AUC-ROC':>8}")
     print("  " + "-" * 66)
 
-    order = ["ZScore", "RobustRollingZScore", "IsolationForest", "Autoencoder"]
+    order = ["ZScore", "RobustRollingZScore", "IsolationForest", "Autoencoder", "LOF"]
     tiers = sorted([t for t in df["tier"].dropna().unique().tolist() if t != "total"])
 
     for tier in tiers + ["total"]:
@@ -1108,6 +1250,11 @@ def build_generic_feature_matrix(
         arrays.append(rs)
         names += [f"rm_{c}" for c in cols]
         names += [f"rs_{c}" for c in cols]
+
+        hz = _estimate_sample_hz(df)
+        ext_arrays, ext_names = compute_extended_features(raw, cols, window, hz)
+        arrays.extend(ext_arrays)
+        names.extend(ext_names)
 
     return np.concatenate(arrays, axis=1).astype(np.float64), names
 
@@ -1211,6 +1358,8 @@ def run_generic_ml_evaluation(
                         detector = RobustRollingZScoreDetector(family=family)
                     elif det_name == "IsolationForest":
                         detector = IsolationForestDetector(contamination=det_cfg["contamination"])
+                    elif det_name == "LOF":
+                        detector = LOFDetector(contamination=det_cfg["contamination"])
                     else:
                         detector = AutoencoderDetector(
                             seq_len=det_cfg["seq_len"],
@@ -1218,7 +1367,8 @@ def run_generic_ml_evaluation(
                         )
                     detector.fit(X_tr, fnames)
                     train_scores = detector.score(X_tr)
-                    thr_val = _fit_threshold(detector, X_tr, thr_pct)
+                    use_evt = (det_name in ("IsolationForest", "LOF"))
+                    thr_val = _fit_threshold(detector, X_tr, thr_pct, use_evt=use_evt)
                     fit_cache[cache_key] = (detector, train_scores, thr_val)
 
                 scores  = detector.score(X_i)

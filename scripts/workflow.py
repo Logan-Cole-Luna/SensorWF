@@ -1,24 +1,30 @@
 """
-workflow.py — FAIR-annotated computational module registry for the
-              CubeSat Telemetry Analysis Workflow (TelWF).
+workflow.py — FAIR-annotated computational module registry for SensorWF.
 
-Each WorkflowModule instance is the canonical machine-readable description
-of one processing stage:  its input/output ports, scientific assumptions,
-and PROV-O / ProvONE identifiers needed to emit a reproducible provenance
-trace at runtime.
+Core modules (M1–M5): domain-agnostic, reusable across satellite, ECG, climate.
+Extension modules (E1–E2): use-case-specific, loaded only by use_cases/ scripts.
+
+  M1  DataIngestion      — parse raw sensor archives into standardised DataFrames
+  M2  QualityAssessment  — NaN/stuck/timing/trend quality audit
+  M3  FeatureEngineering — raw + diff + rolling feature matrix
+  M4  SemanticAnnotation — ontology-linked knowledge graph (RDF/Turtle, GraphML)
+  M5  ProvenanceExport   — PROV-O/ProvONE trace
+
+  E1  FaultInjection     — synthetic fault injection (anomaly detection use case)
+  E2  AnomalyDetection   — ML detector training and evaluation (anomaly detection use case)
 
 Ontology prefixes used throughout
 ───────────────────────────────────
-  prov:    http://www.w3.org/ns/prov#            (W3C PROV-O)
-  provone: http://purl.dataone.org/provone/2015/01/15/ontology#  (ProvONE)
-  xsd:     http://www.w3.org/2001/XMLSchema#
-  rdfs:    http://www.w3.org/2000/01/rdf-schema#
-  sat:     https://example.org/telwf/satellite#  (domain vocabulary)
-  telwf:   https://example.org/telwf/workflow#   (this workflow's namespace)
+  prov:     http://www.w3.org/ns/prov#            (W3C PROV-O)
+  provone:  http://purl.dataone.org/provone/2015/01/15/ontology#  (ProvONE)
+  xsd:      http://www.w3.org/2001/XMLSchema#
+  rdfs:     http://www.w3.org/2000/01/rdf-schema#
+  sensorwf: https://example.org/sensorwf/workflow# (this workflow's namespace)
+  dc:       http://purl.org/dc/terms/
 
 Usage
 ─────
-  from scripts.workflow import MODULE_REGISTRY, emit_workflow_ttl
+  from scripts.workflow import CORE_MODULES, emit_workflow_ttl
   ttl = emit_workflow_ttl()          # static workflow specification
   print(ttl)
 
@@ -37,15 +43,14 @@ from typing import Any
 # ─────────────────────────────────────────────────────────────────────────────
 
 PREFIXES: dict[str, str] = {
-    "prov":    "http://www.w3.org/ns/prov#",
-    "provone": "http://purl.dataone.org/provone/2015/01/15/ontology#",
-    "xsd":     "http://www.w3.org/2001/XMLSchema#",
-    "rdfs":    "http://www.w3.org/2000/01/rdf-schema#",
-    "owl":     "http://www.w3.org/2002/07/owl#",
-    "sat":     "https://example.org/telwf/satellite#",
-    "telwf":   "https://example.org/telwf/workflow#",
+    "prov":      "http://www.w3.org/ns/prov#",
+    "provone":   "http://purl.dataone.org/provone/2015/01/15/ontology#",
+    "xsd":       "http://www.w3.org/2001/XMLSchema#",
+    "rdfs":      "http://www.w3.org/2000/01/rdf-schema#",
+    "owl":       "http://www.w3.org/2002/07/owl#",
     "dc":        "http://purl.org/dc/terms/",
     "sensorwf":  "https://example.org/sensorwf/workflow#",
+    "telwf":     "https://example.org/telwf/workflow#",   # kept for backwards-compat in generated Turtle
 }
 
 
@@ -59,15 +64,7 @@ def _ttl_prefix_block() -> str:
 
 @dataclass(frozen=True)
 class PortSpec:
-    """Describes one input or output port of a computational module.
-
-    Attributes
-    ----------
-    name        : machine-readable identifier (used in RDF local name)
-    label       : human-readable label
-    rdf_type    : XSD or PROV-O type string, e.g. "xsd:string", "prov:Entity"
-    description : one-sentence description
-    """
+    """Describes one input or output port of a computational module."""
     name:        str
     label:       str
     rdf_type:    str
@@ -76,7 +73,7 @@ class PortSpec:
 
 @dataclass
 class WorkflowModule:
-    """One annotated computational module in the telemetry analysis workflow.
+    """One annotated computational module in the SensorWF framework.
 
     Fields
     ------
@@ -87,6 +84,7 @@ class WorkflowModule:
     inputs       : list of PortSpec (in-ports)
     outputs      : list of PortSpec (out-ports)
     assumptions  : scientific/operational assumptions baked into this module
+    extension    : True for use-case extensions (E1, E2); False for core (M1-M5)
     """
     module_id:   str
     label:       str
@@ -95,44 +93,44 @@ class WorkflowModule:
     inputs:      list[PortSpec] = field(default_factory=list)
     outputs:     list[PortSpec] = field(default_factory=list)
     assumptions: list[str]      = field(default_factory=list)
-
-    # ── RDF serialisation ────────────────────────────────────────────────────
+    extension:   bool           = False
 
     def to_turtle(self) -> str:
         """Emit this module as a ProvONE Program with PROV-O annotations."""
         lines: list[str] = []
-        mid = f"telwf:{self.module_id}"
+        mid = f"sensorwf:{self.module_id}"
 
         lines.append(f"{mid}")
         lines.append(f"    a provone:Program, prov:Activity ;")
         lines.append(f'    rdfs:label "{self.label}" ;')
         lines.append(f'    dc:description "{_esc(self.description)}" ;')
-        lines.append(f'    telwf:implementedBy "{self.script_path}" ;')
+        lines.append(f'    sensorwf:implementedBy "{self.script_path}" ;')
+        if self.extension:
+            lines.append(f'    sensorwf:isExtension true ;')
 
         for i, port in enumerate(self.inputs):
-            pid = f"telwf:{self.module_id}_in_{port.name}"
+            pid = f"sensorwf:{self.module_id}_in_{port.name}"
             sep = "," if (i < len(self.inputs) - 1 or self.outputs or self.assumptions) else ""
             lines.append(f"    provone:hasInPort {pid}{sep}")
 
         for i, port in enumerate(self.outputs):
-            pid = f"telwf:{self.module_id}_out_{port.name}"
+            pid = f"sensorwf:{self.module_id}_out_{port.name}"
             sep = "," if (i < len(self.outputs) - 1 or self.assumptions) else ""
             lines.append(f"    provone:hasOutPort {pid}{sep}")
 
         for i, assumption in enumerate(self.assumptions):
             sep = ";" if i < len(self.assumptions) - 1 else ""
-            lines.append(f'    sat:hasScientificAssumption "{_esc(assumption)}"{"," if sep else ""}')
+            lines.append(f'    sensorwf:hasAssumption "{_esc(assumption)}"{"," if sep else ""}')
 
         lines.append(".")
         lines.append("")
 
-        # Emit port descriptions
         for port in self.inputs:
-            pid = f"telwf:{self.module_id}_in_{port.name}"
+            pid = f"sensorwf:{self.module_id}_in_{port.name}"
             lines += _port_turtle(pid, port, "in")
 
         for port in self.outputs:
-            pid = f"telwf:{self.module_id}_out_{port.name}"
+            pid = f"sensorwf:{self.module_id}_out_{port.name}"
             lines += _port_turtle(pid, port, "out")
 
         return "\n".join(lines)
@@ -150,109 +148,102 @@ def _port_turtle(pid: str, port: PortSpec, direction: str) -> list[str]:
         f"    a {dtype} ;",
         f'    rdfs:label "{_esc(port.label)}" ;',
         f'    dc:description "{_esc(port.description)}" ;',
-        f"    telwf:dataType {port.rdf_type} .",
+        f"    sensorwf:dataType {port.rdf_type} .",
         "",
     ]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Module definitions — one per processing stage
+# Core module definitions (M1–M5)
 # ─────────────────────────────────────────────────────────────────────────────
 
 M1_INGEST = WorkflowModule(
-    module_id   = "M1_TelemetryIngestion",
-    label       = "Telemetry Ingestion",
+    module_id   = "M1_DataIngestion",
+    label       = "Data Ingestion",
     description = (
-        "Parses raw SCOTTI archive exports (.txt) into structured CDH and ADCS "
-        "DataFrames. Supports both Analysis-format and Debug-format files, with "
-        "automatic fallback. Extracts 87-field CDH packets and 30-field ADCS "
-        "Sensor packets and assigns ISO 8601 timestamps."
+        "Domain-adaptive ingestion that normalises raw sensor archives into a "
+        "standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). "
+        "Each domain is handled by a pluggable DomainAdapter implementing the shared "
+        "interface. Supports SCOTTI v2 telemetry, MIT-BIH ECG CSV, and Jena Climate CSV."
     ),
-    script_path = "scripts/parser.py",
+    script_path = "scripts/adapters/",
     inputs = [
         PortSpec(
-            name        = "analysis_file",
-            label       = "SCOTTI Analysis File",
+            name        = "raw_files",
+            label       = "Raw Sensor Archive",
             rdf_type    = "xsd:anyURI",
-            description = "Path to a SCOTTI *_Analysis.txt archive export.",
+            description = "Raw sensor archive (SCOTTI v2 txt, MIT-BIH CSV, Jena Climate CSV).",
         ),
         PortSpec(
-            name        = "debug_file",
-            label       = "SCOTTI Debug File",
-            rdf_type    = "xsd:anyURI",
-            description = "Optional path to *_Debug.txt; used if Analysis file is empty.",
+            name        = "adapter_config",
+            label       = "Adapter Configuration",
+            rdf_type    = "xsd:string",
+            description = "Domain adapter parameters (target_hz, session_minutes, year, etc.).",
         ),
     ],
     outputs = [
         PortSpec(
-            name        = "cdh_raw",
-            label       = "Raw CDH DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Un-cleaned CDH packet table with string-typed measurement columns.",
+            name        = "clean_df",
+            label       = "Standardised Time-Series DataFrame",
+            rdf_type    = "sensorwf:DataFrame",
+            description = "Standardised time-series with timestamp, elapsed_s, and sensor channels.",
         ),
         PortSpec(
-            name        = "adcs_raw",
-            label       = "Raw ADCS DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Un-cleaned ADCS Sensor packet table with string-typed columns.",
+            name        = "adapter_meta",
+            label       = "Adapter Metadata",
+            rdf_type    = "xsd:string",
+            description = "Adapter name, channels, native_hz, session length.",
         ),
     ],
     assumptions = [
-        "Archive files follow the SCOTTI v2 protocol with fixed-column CDH and ADCS Plot lines.",
-        "Nominal telemetry sampling rate is 1 Hz; sub-second timestamps are available in Analysis format.",
-        "Hex-encoded fields use unsigned 16-bit representation unless documented as signed (BATT_CHR_I, WHEEL_SPEED).",
+        "Each domain has a unique raw format handled by its DomainAdapter.",
+        "All adapters return a DataFrame with timestamp (datetime) and elapsed_s (float).",
+        "Downsampling is domain-specific and configured via the adapter.",
     ],
 )
 
 
 M2_QUALITY = WorkflowModule(
     module_id   = "M2_QualityAssessment",
-    label       = "Telemetry Quality Assessment",
+    label       = "Quality Assessment",
     description = (
-        "Cleans raw CDH and ADCS DataFrames by decoding hex fields, coercing "
-        "types, deduplicating timestamps, deriving elapsed-time and power "
-        "estimation columns, and flagging stuck-sensor channels. Produces "
-        "analysis-ready DataFrames and a structured quality report."
+        "Domain-agnostic sensor quality audit: NaN rates, stuck-channel detection, "
+        "timing regularity, per-channel z-score flagging, and linear trend detection "
+        "on selected channels. Outputs a machine-readable JSON quality report."
     ),
-    script_path = "scripts/cleaner.py",
+    script_path = "scripts/pipeline_core.py",
     inputs = [
         PortSpec(
-            name        = "cdh_raw",
-            label       = "Raw CDH DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Output of M1: un-cleaned CDH packet table.",
+            name        = "clean_df",
+            label       = "Standardised Time-Series",
+            rdf_type    = "sensorwf:DataFrame",
+            description = "Standardised time-series from M1.",
         ),
         PortSpec(
-            name        = "adcs_raw",
-            label       = "Raw ADCS DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Output of M1: un-cleaned ADCS packet table.",
+            name        = "channels",
+            label       = "Channel List",
+            rdf_type    = "xsd:string",
+            description = "Sensor channels to assess.",
+        ),
+        PortSpec(
+            name        = "config",
+            label       = "Quality Config",
+            rdf_type    = "xsd:string",
+            description = "Domain quality-assessment config (thresholds, expected dt, trend channels).",
         ),
     ],
     outputs = [
         PortSpec(
-            name        = "cdh_clean",
-            label       = "Cleaned CDH DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Type-coerced, deduplicated CDH table with elapsed_s and power columns.",
-        ),
-        PortSpec(
-            name        = "adcs_clean",
-            label       = "Cleaned ADCS DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Type-coerced ADCS table with signed direction-aware numeric fields.",
-        ),
-        PortSpec(
             name        = "quality_report",
             label       = "Quality Report",
-            rdf_type    = "telwf:QualityReport",
-            description = "List of stuck-sensor channel names and timing statistics.",
+            rdf_type    = "sensorwf:QualityReport",
+            description = "Per-channel quality metrics and summary flags.",
         ),
     ],
     assumptions = [
-        "Current ADC scale factor is 1.0 mA/count (relative proxy; full calibration document not available).",
-        "Stuck-sensor detection uses a unique-value threshold of 3 or fewer distinct values over the session.",
-        "Timestamps that are identical to the previous row are dropped as duplicates.",
+        "Stuck sensor: <= 3 unique values in a channel across the full session.",
+        "Z-score flag threshold: configurable per domain (default 3.0 sigma).",
+        "Timing gap threshold: expected_dt * gap_multiplier (domain-specific).",
     ],
 )
 
@@ -261,32 +252,39 @@ M3_FEATURES = WorkflowModule(
     module_id   = "M3_FeatureEngineering",
     label       = "Feature Engineering",
     description = (
-        "Constructs a numeric feature matrix from cleaned telemetry by combining "
-        "raw channel values, first-order differences (rate-of-change), packet-interval "
-        "features from elapsed_s, and rolling mean/std descriptors. Supports CDH-only, "
-        "ADCS-only, and combined CDH+ADCS feature spaces."
+        "Builds a multi-dimensional feature matrix from the clean time-series. "
+        "Nine feature families per channel (when session >= 3x window): raw value, "
+        "first-order difference, rolling mean, rolling std, rolling skewness, rolling "
+        "excess kurtosis, zero-crossing rate, spectral entropy, and dominant frequency (Hz). "
+        "A sample-interval timing feature (dt_sample) is always included."
     ),
     script_path = "scripts/evaluator.py",
     inputs = [
         PortSpec(
-            name        = "cdh_clean",
-            label       = "Cleaned CDH DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Output of M2.",
+            name        = "clean_df",
+            label       = "Standardised Time-Series",
+            rdf_type    = "sensorwf:DataFrame",
+            description = "Standardised time-series from M1.",
         ),
         PortSpec(
-            name        = "adcs_clean",
-            label       = "Cleaned ADCS DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Output of M2.",
+            name        = "channels",
+            label       = "Channel List",
+            rdf_type    = "xsd:string",
+            description = "Sensor channels to engineer features over.",
+        ),
+        PortSpec(
+            name        = "window",
+            label       = "Rolling Window Size",
+            rdf_type    = "xsd:integer",
+            description = "Rolling window size in samples.",
         ),
     ],
     outputs = [
         PortSpec(
             name        = "feature_matrix",
             label       = "Feature Matrix",
-            rdf_type    = "telwf:NumpyArray",
-            description = "Numeric (n_samples, n_features) float64 array ready for ML detectors.",
+            rdf_type    = "sensorwf:NumpyArray",
+            description = "Numeric (n_samples, n_features) float64 array.",
         ),
         PortSpec(
             name        = "feature_names",
@@ -296,36 +294,126 @@ M3_FEATURES = WorkflowModule(
         ),
     ],
     assumptions = [
-        "Rolling statistics window is 15 samples; features are only added when session length >= 45 rows.",
-        "Missing values are forward-filled then backward-filled then zero-filled before feature extraction.",
-        "First-order differences at index 0 are set to 0 to avoid NaN propagation.",
+        "Rolling statistics are only computed when session length >= 3 * window.",
+        "NaN values are forward-filled then backward-filled before feature extraction.",
+        "Window size should be tuned per domain (ECG: 100, Climate: 24, Satellite: 15 samples).",
     ],
 )
 
 
-M4_FAULT_INJECTION = WorkflowModule(
-    module_id   = "M4_FaultInjection",
+M4_SEMANTIC = WorkflowModule(
+    module_id   = "M4_SemanticAnnotation",
+    label       = "Semantic Annotation and Knowledge Graph Construction",
+    description = (
+        "Maps feature names and (optionally) ML detector evidence to domain OWL ontology "
+        "classes to produce an ontology-linked knowledge graph (RDF/Turtle, GraphML). "
+        "Enables SPARQL-queryable, subsystem-grounded explainability and cross-domain "
+        "semantic comparison. In core mode, edges encode feature-class membership; "
+        "in use-case mode, edges are additionally weighted by IsolationForest importances."
+    ),
+    script_path = "scripts/utils/semantic_if_kg.py",
+    inputs = [
+        PortSpec(
+            name        = "feature_names",
+            label       = "Feature Name List",
+            rdf_type    = "xsd:string",
+            description = "Feature names from M3.",
+        ),
+        PortSpec(
+            name        = "ontology_owl",
+            label       = "Domain Ontology",
+            rdf_type    = "xsd:anyURI",
+            description = "Domain OWL ontology file.",
+        ),
+        PortSpec(
+            name        = "ml_results",
+            label       = "ML Evaluation Results (optional)",
+            rdf_type    = "xsd:anyURI",
+            description = "Optional E2 output; if provided, IF importances weight KG edges.",
+        ),
+    ],
+    outputs = [
+        PortSpec(
+            name        = "kg_turtle",
+            label       = "Knowledge Graph (Turtle)",
+            rdf_type    = "xsd:anyURI",
+            description = "RDF/Turtle serialisation of the semantic KG.",
+        ),
+        PortSpec(
+            name        = "kg_nodes_csv",
+            label       = "Knowledge Graph Nodes CSV",
+            rdf_type    = "xsd:anyURI",
+            description = "Node table for GraphML/NetworkX analysis.",
+        ),
+        PortSpec(
+            name        = "kg_edges_csv",
+            label       = "Knowledge Graph Edges CSV",
+            rdf_type    = "xsd:anyURI",
+            description = "Edge table with semantic relation types and importance weights.",
+        ),
+    ],
+    assumptions = [
+        "Feature names are matched to OWL class local names by prefix substring.",
+        "IsolationForest feature_importances_ are used as edge weights (extension mode only).",
+        "Ontology local names follow the domain-specific naming convention.",
+    ],
+)
+
+
+M5_PROVENANCE = WorkflowModule(
+    module_id   = "M5_ProvenanceExport",
+    label       = "Provenance Export",
+    description = (
+        "Records one prov:Activity per M1-M4 module execution with wall-clock timestamps, "
+        "input row counts, output file paths, and parameter values. Serialises the "
+        "complete PROV-O/ProvONE trace to RDF/Turtle."
+    ),
+    script_path = "scripts/provenance_recorder.py",
+    inputs = [
+        PortSpec(
+            name        = "execution_log",
+            label       = "Execution Log",
+            rdf_type    = "sensorwf:ExecutionLog",
+            description = "In-memory list of module execution records collected during the pipeline run.",
+        ),
+    ],
+    outputs = [
+        PortSpec(
+            name        = "provenance_ttl",
+            label       = "Provenance Trace (Turtle)",
+            rdf_type    = "xsd:anyURI",
+            description = "PROV-O/ProvONE serialisation of the full run.",
+        ),
+    ],
+    assumptions = [
+        "Timestamps are UTC ISO 8601 strings.",
+        "SHA-256 checksums are computed automatically for all file-path entities and stored as telwf:sha256 in the provenance trace.",
+        "Agent information is limited to the host machine; no multi-user attribution is tracked.",
+    ],
+)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Extension module definitions (E1–E2, anomaly detection use case only)
+# ─────────────────────────────────────────────────────────────────────────────
+
+E1_FAULT_INJECTION = WorkflowModule(
+    module_id   = "E1_FaultInjection",
     label       = "Synthetic Fault Injection",
     description = (
-        "Generates labelled telemetry variants by injecting 16 literature-informed "
-        "single-channel fault morphologies plus 2 compound multi-subsystem faults "
+        "Generates labelled sensor variants by injecting domain-specific fault morphologies "
         "across three difficulty tiers (easy / medium / hard). Each tier co-varies "
         "amplitude, duration, and channel spread following benchmark design guidelines "
         "from Hundman et al. (2018) and Wu & Keogh (2022)."
     ),
-    script_path = "scripts/injector.py",
+    script_path = "scripts/utils/injector.py",
+    extension   = True,
     inputs = [
         PortSpec(
-            name        = "cdh_clean",
-            label       = "Cleaned CDH DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Output of M2: fault-free CDH telemetry session.",
-        ),
-        PortSpec(
-            name        = "adcs_clean",
-            label       = "Cleaned ADCS DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Output of M2: fault-free ADCS telemetry session.",
+            name        = "clean_df",
+            label       = "Clean Session DataFrame",
+            rdf_type    = "sensorwf:DataFrame",
+            description = "Output of M2: fault-free session.",
         ),
         PortSpec(
             name        = "seed",
@@ -345,7 +433,7 @@ M4_FAULT_INJECTION = WorkflowModule(
             name        = "injected_variants",
             label       = "Injected CSV Variants",
             rdf_type    = "xsd:anyURI",
-            description = "Directory of *_injected_*.csv files, one per fault/tier/variant.",
+            description = "Directory of injected CSV files, one per fault/tier/variant.",
         ),
         PortSpec(
             name        = "label_files",
@@ -361,48 +449,41 @@ M4_FAULT_INJECTION = WorkflowModule(
         ),
     ],
     assumptions = [
-        "Fault morphology parameters are sampled from literature (KDD 2018, NAB 2015, TKDE 2022).",
         "Tier profiles (easy/medium/hard) simultaneously scale amplitude, duration, and channel spread.",
-        "Random seed 42 is the default canonical seed for reproducibility; changing it is documented.",
-        "Anomaly windows occupy 10-50% of a session; detector threshold calibration uses the clean 60% prefix.",
+        "Random seed 42 is the default canonical seed for reproducibility.",
+        "Anomaly windows occupy 10-50% of a session; threshold calibration uses the clean 60% prefix.",
     ],
 )
 
 
-M5_DETECTION = WorkflowModule(
-    module_id   = "M5_AnomalyDetection",
+E2_DETECTION = WorkflowModule(
+    module_id   = "E2_AnomalyDetection",
     label       = "Anomaly Detection",
     description = (
-        "Trains and evaluates four anomaly detectors (ZScore, RobustRollingZScore, "
-        "IsolationForest with rotation ensemble, multi-scale denoising Autoencoder) "
-        "on injected telemetry variants. Each detector is trained on the first 60% "
-        "of the clean session and scored on the full injected stream. Decision "
-        "thresholds are calibrated at the 99th percentile of clean training scores."
+        "Trains and evaluates five anomaly detectors (ZScore, RobustRollingZScore, "
+        "IsolationForest with rotation ensemble, Autoencoder multi-scale MLP, LOF) "
+        "on injected sensor variants. Threshold strategy: EVT/POT GPD calibration for "
+        "density detectors; 99th-percentile for statistical detectors."
     ),
     script_path = "scripts/evaluator.py",
+    extension   = True,
     inputs = [
         PortSpec(
             name        = "injected_variants",
             label       = "Injected Variants Directory",
             rdf_type    = "xsd:anyURI",
-            description = "Output of M4: directory containing injected CSV files.",
+            description = "Output of E1: directory containing injected CSV files.",
         ),
         PortSpec(
             name        = "label_files",
             label       = "Ground-Truth Label Files",
             rdf_type    = "xsd:anyURI",
-            description = "Output of M4: labels_*.csv files with anomaly window indices.",
+            description = "Output of E1: labels_*.csv files with anomaly window indices.",
         ),
         PortSpec(
-            name        = "cdh_clean",
-            label       = "Clean CDH DataFrame",
-            rdf_type    = "telwf:DataFrame",
-            description = "Used to build the clean training prefix for detector fitting.",
-        ),
-        PortSpec(
-            name        = "adcs_clean",
-            label       = "Clean ADCS DataFrame",
-            rdf_type    = "telwf:DataFrame",
+            name        = "clean_df",
+            label       = "Clean Session DataFrame",
+            rdf_type    = "sensorwf:DataFrame",
             description = "Used to build the clean training prefix for detector fitting.",
         ),
     ],
@@ -411,147 +492,49 @@ M5_DETECTION = WorkflowModule(
             name        = "ml_evaluation_json",
             label       = "ML Evaluation JSON",
             rdf_type    = "xsd:anyURI",
-            description = "ml_evaluation.json: per-(tag, tier, variant, detector) result dicts.",
+            description = "Per-(tag, tier, variant, detector) result dicts.",
         ),
         PortSpec(
             name        = "ml_metrics_csv",
             label       = "Tier Metrics CSV",
             rdf_type    = "xsd:anyURI",
-            description = "ml_metrics_by_tier.csv: aggregated metrics per tier and detector.",
+            description = "Aggregated metrics per tier and detector.",
         ),
         PortSpec(
             name        = "feature_importances",
             label       = "IsolationForest Feature Importances",
-            rdf_type    = "telwf:NumpyArray",
-            description = "Mean split-frequency importances across all IF trees and ensemble members.",
+            rdf_type    = "sensorwf:NumpyArray",
+            description = "Mean split-frequency importances across all IF trees.",
         ),
     ],
     assumptions = [
-        "Training split is 60% of the clean telemetry prefix; the remaining 40% is used for threshold validation.",
+        "Training split is 60% of the clean session prefix; the remaining 40% is used for threshold validation.",
         "Decision threshold is the 99th percentile of clean training scores, targeting ~1% nominal FPR.",
         "IsolationForest uses a rotation ensemble of 3 members to reduce axis-alignment bias.",
         "Autoencoder uses multi-scale windowing (seq_len 8 and 16) with denoising (sigma=0.06).",
-    ],
-)
-
-
-M6_SEMANTIC = WorkflowModule(
-    module_id   = "M6_SemanticAnnotation",
-    label       = "Semantic Annotation and Knowledge Graph Construction",
-    description = (
-        "Maps detector evidence (feature importances, tree split rules, per-instance "
-        "local contributions) to ontology classes from satellitesystem.owl to produce "
-        "an ontology-linked knowledge graph (RDF/Turtle, GraphML). Enables "
-        "SPARQL-queryable, subsystem-grounded explainability and cross-family "
-        "semantic comparison."
-    ),
-    script_path = "scripts/semantic_if_kg.py",
-    inputs = [
-        PortSpec(
-            name        = "ml_evaluation_json",
-            label       = "ML Evaluation JSON",
-            rdf_type    = "xsd:anyURI",
-            description = "Output of M5: feature importances and per-instance scores.",
-        ),
-        PortSpec(
-            name        = "ontology_owl",
-            label       = "Satellite System Ontology",
-            rdf_type    = "xsd:anyURI",
-            description = "satellitesystem.owl: OWL ontology covering CDH, ADCS, EPS, COMMS subsystems.",
-        ),
-        PortSpec(
-            name        = "clean_data_dir",
-            label       = "Clean Data Directory",
-            rdf_type    = "xsd:anyURI",
-            description = "Directory containing cdh_clean.csv and adcs_clean.csv per experiment.",
-        ),
-    ],
-    outputs = [
-        PortSpec(
-            name        = "kg_turtle",
-            label       = "Knowledge Graph (Turtle)",
-            rdf_type    = "xsd:anyURI",
-            description = "if_ontology_graph.ttl: RDF/Turtle serialisation of the semantic KG.",
-        ),
-        PortSpec(
-            name        = "kg_nodes_csv",
-            label       = "Knowledge Graph Nodes CSV",
-            rdf_type    = "xsd:anyURI",
-            description = "if_ontology_nodes.csv: node table for GraphML/NetworkX analysis.",
-        ),
-        PortSpec(
-            name        = "kg_edges_csv",
-            label       = "Knowledge Graph Edges CSV",
-            rdf_type    = "xsd:anyURI",
-            description = "if_ontology_edges.csv: edge table with semantic relation types.",
-        ),
-        PortSpec(
-            name        = "interpretability_report",
-            label       = "Interpretability Report",
-            rdf_type    = "xsd:anyURI",
-            description = "if_interpretability_report.md: human-readable semantic findings.",
-        ),
-    ],
-    assumptions = [
-        "Ontology local names match the feature-name prefixes used in the feature engineering step.",
-        "IsolationForest is re-fit in no-PCA, no-rotation mode for rule extraction to preserve feature-space interpretability.",
-        "Local contribution signals are from tree-path depth proxies; SHAP is used if available, else depth-based fallback.",
-    ],
-)
-
-
-M7_PROVENANCE = WorkflowModule(
-    module_id   = "M7_ProvenanceExport",
-    label       = "Provenance Export",
-    description = (
-        "Collects runtime execution records from all upstream modules and serialises "
-        "them as a PROV-O / ProvONE Turtle document. Records prov:Activity instances "
-        "with start/end times, prov:Entity instances for all data artifacts with row "
-        "counts and file paths, and prov:wasDerivedFrom / prov:wasGeneratedBy "
-        "provenance chains linking every output back to its source inputs."
-    ),
-    script_path = "scripts/provenance_recorder.py",
-    inputs = [
-        PortSpec(
-            name        = "execution_log",
-            label       = "Execution Log",
-            rdf_type    = "telwf:ExecutionLog",
-            description = "In-memory list of ModuleExecution records collected during the pipeline run.",
-        ),
-    ],
-    outputs = [
-        PortSpec(
-            name        = "provenance_ttl",
-            label       = "Provenance Trace (Turtle)",
-            rdf_type    = "xsd:anyURI",
-            description = "results/provenance.ttl: PROV-O/ProvONE serialisation of the full run.",
-        ),
-    ],
-    assumptions = [
-        "Timestamps are UTC ISO 8601 strings.",
-        "File sizes and row counts are recorded but not checksummed; SHA-256 checksums can be added.",
-        "Agent information is limited to the host machine; no multi-user attribution is tracked.",
+        "LOF uses novelty=True mode — fitted on clean data, evaluated on injected data.",
+        "EVT calibration requires >=10 exceedances above the 90th-percentile pre-threshold.",
     ],
 )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Workflow channel declarations (module-to-module data flows)
+# Workflow channel declarations (module-to-module data flows, core only)
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass(frozen=True)
 class WorkflowChannel:
     """A provone:Channel connecting an out-port to an in-port."""
     channel_id:  str
-    from_module: str   # module_id
-    out_port:    str   # port name
-    to_module:   str   # module_id
-    in_port:     str   # port name
+    from_module: str
+    out_port:    str
+    to_module:   str
+    in_port:     str
 
     def to_turtle(self) -> str:
-        cid = f"telwf:{self.channel_id}"
-        src = f"telwf:{self.from_module}_out_{self.out_port}"
-        dst = f"telwf:{self.to_module}_in_{self.in_port}"
+        cid = f"sensorwf:{self.channel_id}"
+        src = f"sensorwf:{self.from_module}_out_{self.out_port}"
+        dst = f"sensorwf:{self.to_module}_in_{self.in_port}"
         return (
             f"{cid}\n"
             f"    a provone:Channel ;\n"
@@ -561,34 +544,33 @@ class WorkflowChannel:
 
 
 CHANNELS: list[WorkflowChannel] = [
-    WorkflowChannel("ch01", "M1_TelemetryIngestion",  "cdh_raw",             "M2_QualityAssessment",  "cdh_raw"),
-    WorkflowChannel("ch02", "M1_TelemetryIngestion",  "adcs_raw",            "M2_QualityAssessment",  "adcs_raw"),
-    WorkflowChannel("ch03", "M2_QualityAssessment",   "cdh_clean",           "M3_FeatureEngineering", "cdh_clean"),
-    WorkflowChannel("ch04", "M2_QualityAssessment",   "adcs_clean",          "M3_FeatureEngineering", "adcs_clean"),
-    WorkflowChannel("ch05", "M2_QualityAssessment",   "cdh_clean",           "M4_FaultInjection",     "cdh_clean"),
-    WorkflowChannel("ch06", "M2_QualityAssessment",   "adcs_clean",          "M4_FaultInjection",     "adcs_clean"),
-    WorkflowChannel("ch07", "M2_QualityAssessment",   "cdh_clean",           "M5_AnomalyDetection",   "cdh_clean"),
-    WorkflowChannel("ch08", "M2_QualityAssessment",   "adcs_clean",          "M5_AnomalyDetection",   "adcs_clean"),
-    WorkflowChannel("ch09", "M4_FaultInjection",      "injected_variants",   "M5_AnomalyDetection",   "injected_variants"),
-    WorkflowChannel("ch10", "M4_FaultInjection",      "label_files",         "M5_AnomalyDetection",   "label_files"),
-    WorkflowChannel("ch11", "M5_AnomalyDetection",    "ml_evaluation_json",  "M6_SemanticAnnotation", "ml_evaluation_json"),
-    WorkflowChannel("ch12", "M5_AnomalyDetection",    "ml_evaluation_json",  "M7_ProvenanceExport",   "execution_log"),
+    WorkflowChannel("ch01", "M1_DataIngestion",     "clean_df",       "M2_QualityAssessment",  "clean_df"),
+    WorkflowChannel("ch02", "M1_DataIngestion",     "adapter_meta",   "M2_QualityAssessment",  "channels"),
+    WorkflowChannel("ch03", "M2_QualityAssessment", "quality_report", "M3_FeatureEngineering", "clean_df"),
+    WorkflowChannel("ch04", "M3_FeatureEngineering","feature_names",  "M4_SemanticAnnotation", "feature_names"),
+    WorkflowChannel("ch05", "M3_FeatureEngineering","feature_matrix", "M4_SemanticAnnotation", "ml_results"),
+    WorkflowChannel("ch06", "M4_SemanticAnnotation","kg_turtle",      "M5_ProvenanceExport",   "execution_log"),
 ]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Module registry — ordered by execution stage
+# Module registries
 # ─────────────────────────────────────────────────────────────────────────────
 
-MODULE_REGISTRY: list[WorkflowModule] = [
+CORE_MODULES: list[WorkflowModule] = [
     M1_INGEST,
     M2_QUALITY,
     M3_FEATURES,
-    M4_FAULT_INJECTION,
-    M5_DETECTION,
-    M6_SEMANTIC,
-    M7_PROVENANCE,
+    M4_SEMANTIC,
+    M5_PROVENANCE,
 ]
+
+EXTENSION_MODULES: list[WorkflowModule] = [
+    E1_FAULT_INJECTION,
+    E2_DETECTION,
+]
+
+MODULE_REGISTRY: list[WorkflowModule] = CORE_MODULES + EXTENSION_MODULES
 
 MODULE_BY_ID: dict[str, WorkflowModule] = {m.module_id: m for m in MODULE_REGISTRY}
 
@@ -598,16 +580,19 @@ MODULE_BY_ID: dict[str, WorkflowModule] = {m.module_id: m for m in MODULE_REGIST
 # ─────────────────────────────────────────────────────────────────────────────
 
 _WORKFLOW_COMMENT = """\
-# TelWF — CubeSat Telemetry Analysis Workflow
+# SensorWF — Generalizable FAIR Sensor Analytics Workflow
 # Static specification: module ports, assumptions, and data-flow channels.
 # Runtime execution provenance is appended by scripts/provenance_recorder.py.
+#
+# Core modules:      M1 DataIngestion, M2 QualityAssessment, M3 FeatureEngineering,
+#                    M4 SemanticAnnotation, M5 ProvenanceExport
+# Extension modules: E1 FaultInjection, E2 AnomalyDetection (use_cases/ only)
 #
 # Ontology alignment:
 #   provone:Program  — computational module
 #   provone:InPort   — input data/parameter slot
 #   provone:OutPort  — output artifact slot
 #   provone:Channel  — data-flow edge between ports
-#   sat:hasScientificAssumption — domain assumption annotation
 #   prov:Activity    — a single module execution event (runtime)
 #   prov:Entity      — a data artifact (runtime)
 #
@@ -617,14 +602,15 @@ _WORKFLOW_COMMENT = """\
 """
 
 _WORKFLOW_HEADER = """\
-telwf:TelemetryAnalysisWorkflow
+sensorwf:SensorWFWorkflow
     a provone:Workflow, prov:Plan ;
-    rdfs:label "TelWF: CubeSat Telemetry Analysis Workflow" ;
-    dc:description "A FAIR-annotated, reproducible workflow for CubeSat telemetry "
-        "ingestion, quality assessment, feature engineering, synthetic fault injection, "
-        "multi-detector anomaly scoring, and ontology-linked semantic interpretation." ;
+    rdfs:label "SensorWF: Generalizable FAIR Sensor Analytics Workflow" ;
+    dc:description "A FAIR-annotated, reproducible workflow for multi-domain sensor "
+        "time-series analysis: data ingestion, quality assessment, feature engineering, "
+        "semantic annotation, and provenance export. Supports satellite telemetry, "
+        "biomedical ECG, and atmospheric climate domains." ;
     dc:creator "Logan Luna" ;
-    telwf:version "1.0" ;
+    sensorwf:version "1.0" ;
 """
 
 
@@ -637,15 +623,15 @@ def emit_workflow_ttl() -> str:
         _WORKFLOW_HEADER,
     ]
 
-    # Wire workflow → modules
+    # Wire workflow → core modules
     parts.append("    provone:hasSubProgram")
-    for i, mod in enumerate(MODULE_REGISTRY):
-        sep = "," if i < len(MODULE_REGISTRY) - 1 else " ."
-        parts.append(f"        telwf:{mod.module_id}{sep}")
+    for i, mod in enumerate(CORE_MODULES):
+        sep = "," if i < len(CORE_MODULES) - 1 else " ."
+        parts.append(f"        sensorwf:{mod.module_id}{sep}")
     parts.append("")
 
-    # Individual module descriptions
-    for mod in MODULE_REGISTRY:
+    # Individual module descriptions (core only in static spec)
+    for mod in CORE_MODULES:
         parts.append(f"# ── {mod.label} ──────────────────────────────────────────")
         parts.append(mod.to_turtle())
 

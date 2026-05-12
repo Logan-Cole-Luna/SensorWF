@@ -6,7 +6,7 @@ Works with any time-series DataFrame that has:
   - elapsed_s  : float seconds from session start
   - N numeric channels (any names)
 
-Used by run_ecg.py, run_climate.py, and (via adapters) main.py.
+Used by run_ecg.py, run_climate.py, and run_sat.py (via domain runners).
 """
 
 from __future__ import annotations
@@ -21,6 +21,141 @@ import pandas as pd
 from scipy import stats as sp_stats
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+
+# ---------------------------------------------------------------------------
+# Shared spectral / statistical feature helpers  (used by M3 and evaluator)
+# ---------------------------------------------------------------------------
+
+def _estimate_sample_hz(df: pd.DataFrame) -> float:
+    """Estimate sampling rate in Hz from elapsed_s column."""
+    if "elapsed_s" not in df.columns:
+        return 1.0
+    t = pd.to_numeric(df["elapsed_s"], errors="coerce").dropna()
+    dt = t.diff().dropna()
+    dt_pos = dt[dt > 0]
+    if dt_pos.empty:
+        return 1.0
+    return float(1.0 / max(float(dt_pos.median()), 1e-6))
+
+
+def _rolling_spectral_features(
+    x2d: np.ndarray,
+    window: int,
+    sample_hz: float = 1.0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Vectorised rolling spectral entropy and dominant frequency.
+
+    Parameters
+    ----------
+    x2d      : (n_samples, n_channels) float64
+    window   : FFT window length (samples)
+    sample_hz: sampling rate in Hz (for frequency axis)
+
+    Returns
+    -------
+    spec_entropy : (n_samples, n_channels) – Shannon entropy of power spectrum
+    dom_freq     : (n_samples, n_channels) – peak frequency excluding DC (Hz)
+    """
+    n, nc = x2d.shape
+    spec_ent = np.zeros((n, nc), dtype=float)
+    dom_freq = np.zeros((n, nc), dtype=float)
+    if n < window or window < 4:
+        return spec_ent, dom_freq
+
+    freqs = np.fft.rfftfreq(window, d=1.0 / max(sample_hz, 1e-6))
+
+    for ci in range(nc):
+        x = x2d[:, ci].astype(float)
+        mu = x.mean()
+        x_c = x - mu
+
+        # Build sliding-window matrix (n, window) via stride tricks
+        x_pad = np.pad(x_c, (window - 1, 0), mode="edge")
+        stride = x_pad.strides[0]
+        try:
+            wins = np.lib.stride_tricks.as_strided(
+                x_pad,
+                shape=(n, window),
+                strides=(stride, stride),
+                writeable=False,
+            ).copy()
+        except Exception:
+            continue
+
+        fft_mag = np.abs(np.fft.rfft(wins, axis=1))          # (n, nf)
+
+        # Dominant frequency (skip DC component at index 0)
+        if fft_mag.shape[1] > 1:
+            dom_freq[:, ci] = freqs[np.argmax(fft_mag[:, 1:], axis=1) + 1]
+
+        # Spectral entropy: H = -sum(p * log2(p)) over normalised power spectrum
+        psd = fft_mag ** 2
+        psd_sum = psd.sum(axis=1, keepdims=True) + 1e-10
+        p = np.clip(psd / psd_sum, 1e-10, None)
+        spec_ent[:, ci] = -np.sum(p * np.log2(p), axis=1)
+
+    return spec_ent, dom_freq
+
+
+def _rolling_zcr(x2d: np.ndarray, window: int) -> np.ndarray:
+    """
+    Rolling zero-crossing rate: fraction of adjacent sample pairs whose sign
+    differs within the rolling window, computed relative to the channel mean.
+
+    Returns (n_samples, n_channels) float64.
+    """
+    n, nc = x2d.shape
+    result = np.zeros((n, nc), dtype=float)
+    for ci in range(nc):
+        x = x2d[:, ci]
+        centered = x - x.mean()
+        sign = np.sign(centered)
+        crossings = (np.diff(sign, prepend=sign[0]) != 0).astype(float)
+        result[:, ci] = (
+            pd.Series(crossings).rolling(window, min_periods=1).mean().to_numpy()
+        )
+    return result
+
+
+def compute_extended_features(
+    raw_df: pd.DataFrame,
+    cols: list[str],
+    window: int,
+    sample_hz: float = 1.0,
+) -> tuple[list[np.ndarray], list[str]]:
+    """
+    Compute the 5 extended feature families for a set of channels.
+
+    Returns arrays and name lists for:
+      sk_{c}  – rolling skewness
+      ku_{c}  – rolling excess kurtosis
+      zcr_{c} – zero-crossing rate
+      se_{c}  – spectral entropy
+      df_{c}  – dominant frequency (Hz)
+
+    Only called when len(df) >= window * 3.
+    """
+    raw = raw_df[cols].copy().astype(float).ffill().bfill().fillna(0.0)
+    x2d = raw.to_numpy()
+    mp3 = max(3, window // 3)
+    mp4 = max(4, window // 4)
+
+    skew = raw.rolling(window, min_periods=mp3).skew().fillna(0.0).to_numpy()
+    kurt = raw.rolling(window, min_periods=mp4).kurt().fillna(0.0).to_numpy()
+    zcr  = _rolling_zcr(x2d, window)
+    spec_ent, dom_freq = _rolling_spectral_features(x2d, window, sample_hz)
+
+    arrays = [skew, kurt, zcr, spec_ent, dom_freq]
+    names  = (
+        [f"sk_{c}"  for c in cols]
+        + [f"ku_{c}"  for c in cols]
+        + [f"zcr_{c}" for c in cols]
+        + [f"se_{c}"  for c in cols]
+        + [f"df_{c}"  for c in cols]
+    )
+    return arrays, names
 
 # ---------------------------------------------------------------------------
 # M2 -- Domain-agnostic quality assessment
@@ -160,12 +295,17 @@ def build_generic_features(
     """
     Build a generic feature matrix from any set of numeric channels.
 
-    Features per channel
-    --------------------
-    1. Raw value
-    2. First-order difference (rate of change)
-    3. Rolling mean (window)  -- only when session >= 3× window
-    4. Rolling std  (window)  -- only when session >= 3× window
+    Features per channel (when session >= 3× window)
+    -------------------------------------------------
+    1.  Raw value
+    2.  First-order difference  (d_{c})
+    3.  Rolling mean            (rm_{c})
+    4.  Rolling std             (rs_{c})
+    5.  Rolling skewness        (sk_{c})
+    6.  Rolling excess kurtosis (ku_{c})
+    7.  Zero-crossing rate      (zcr_{c})
+    8.  Spectral entropy        (se_{c})
+    9.  Dominant frequency (Hz) (df_{c})
 
     Timing feature
     --------------
@@ -198,7 +338,7 @@ def build_generic_features(
         arrays.append(dt.to_numpy()[:, None])
         names.append("dt_sample")
 
-    # Rolling statistics
+    # Rolling statistics + spectral features (requires session >= 3× window)
     if len(df) >= window * 3:
         rm = raw.rolling(window, min_periods=1).mean().to_numpy()
         rs = raw.rolling(window, min_periods=1).std().fillna(0.0).to_numpy()
@@ -206,6 +346,11 @@ def build_generic_features(
         arrays.append(rs)
         names += [f"rm_{c}" for c in cols]
         names += [f"rs_{c}" for c in cols]
+
+        hz = _estimate_sample_hz(df)
+        ext_arrays, ext_names = compute_extended_features(raw, cols, window, hz)
+        arrays.extend(ext_arrays)
+        names.extend(ext_names)
 
     X = np.concatenate(arrays, axis=1).astype(np.float64)
     return X, names

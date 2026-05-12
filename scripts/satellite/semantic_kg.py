@@ -188,6 +188,38 @@ def _list_families(results_dir: str) -> list[str]:
     return out
 
 
+def load_all_detector_rows(results_dir: str) -> pd.DataFrame:
+    """Load per-variant per-detector metrics for all 5 detectors."""
+    rows: list[dict[str, Any]] = []
+    for fam in _list_families(results_dir):
+        p = os.path.join(results_dir, fam, "injected", "ml_evaluation.json")
+        if not os.path.exists(p):
+            continue
+        try:
+            data = json.loads(open(p, "r", encoding="utf-8").read())
+        except Exception:
+            continue
+        if not isinstance(data, list):
+            continue
+        for r in data:
+            if r.get("error"):
+                continue
+            detector = str(r.get("detector", "Unknown"))
+            rows.append({
+                "family":    fam,
+                "tag":       str(r.get("tag", "unknown")),
+                "tier":      str(r.get("tier", "unknown")),
+                "variant":   int(r.get("variant", 0)),
+                "detector":  detector,
+                "auc_roc":   float(r.get("auc_roc",   np.nan)),
+                "f1":        float(r.get("f1",        np.nan)),
+                "recall":    float(r.get("recall",    np.nan)),
+                "precision": float(r.get("precision", np.nan)),
+                "fpr":       float(r.get("fpr",       np.nan)),
+            })
+    return pd.DataFrame(rows)
+
+
 def load_isolationforest_rows(results_dir: str) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for fam in _list_families(results_dir):
@@ -465,7 +497,8 @@ def build_semantic_graph(
     os.makedirs(output_dir, exist_ok=True)
 
     onto = parse_ontology(ontology_path)
-    df_if = load_isolationforest_rows(results_dir)
+    df_if  = load_isolationforest_rows(results_dir)
+    df_all = load_all_detector_rows(results_dir)
     rule_rows = fit_interpretable_if_rules(results_dir, max_tags_per_family=max_tags_per_family)
 
     nodes: dict[str, dict[str, Any]] = {}
@@ -539,6 +572,72 @@ def build_semantic_graph(
             add_edge(feat_id, "if:belongsToSubsystem", subsys_id)
             add_edge(feat_id, "if:hasSemanticType", sem_id)
 
+    # ── Multi-detector performance nodes ──────────────────────────────────────
+    if not df_all.empty:
+        det_agg = (
+            df_all.groupby(["family", "tag", "detector"], as_index=False)
+            .agg(
+                mean_auc=("auc_roc", "mean"),
+                mean_f1=("f1", "mean"),
+                mean_recall=("recall", "mean"),
+                mean_fpr=("fpr", "mean"),
+            )
+        )
+        for _, r in det_agg.iterrows():
+            fam     = str(r["family"])
+            tag     = str(r["tag"])
+            det     = str(r["detector"])
+            mean_f1 = float(r["mean_f1"]) if not np.isnan(float(r["mean_f1"])) else 0.0
+
+            fam_id  = f"if:family:{fam}"
+            tag_id  = f"if:tag:{tag}"
+            det_id  = f"det:detector:{det}"
+            perf_id = f"det:performance:{fam}:{tag}:{det}"
+
+            add_node(fam_id,  "Family",   fam, "ml_evaluation.json")
+            add_node(tag_id,  "AnomalyTag", tag, "ml_evaluation.json")
+            add_node(det_id,  "Detector",  det, "ml_evaluation.json")
+            add_node(perf_id, "DetectorPerformance",
+                     f"{det}@{fam}/{tag}", "ml_evaluation.json")
+            nodes[perf_id].update({
+                "auc_roc":   round(float(r["mean_auc"])    if not np.isnan(float(r["mean_auc"]))    else 0.0, 4),
+                "f1":        round(mean_f1, 4),
+                "recall":    round(float(r["mean_recall"]) if not np.isnan(float(r["mean_recall"])) else 0.0, 4),
+                "fpr":       round(float(r["mean_fpr"])    if not np.isnan(float(r["mean_fpr"]))    else 0.0, 4),
+            })
+
+            add_edge(fam_id, "det:hasDetector",      det_id)
+            add_edge(fam_id, "det:hasTag",            tag_id)
+            add_edge(det_id, "det:evaluatedOn",       tag_id,  weight=mean_f1,        context=fam)
+            add_edge(det_id, "det:hasPerformance",    perf_id, weight=mean_f1,        context=fam)
+            add_edge(tag_id, "det:detectedBy",        det_id,  weight=mean_f1,        context=fam)
+
+        # Consensus edges: anomaly tags detected with high recall (>= 0.5) by
+        # multiple detectors get a "consensusDetection" edge for each confirming detector.
+        recall_pivot = (
+            df_all.groupby(["family", "tag", "detector"])["recall"]
+            .mean()
+            .reset_index()
+            .rename(columns={"recall": "mean_recall"})
+        )
+        consensus = recall_pivot[recall_pivot["mean_recall"] >= 0.5]
+        confirming = consensus.groupby(["family", "tag"])["detector"].apply(list).reset_index()
+        for _, row in confirming.iterrows():
+            fam = str(row["family"])
+            tag = str(row["tag"])
+            dets: list[str] = list(row["detector"])
+            if len(dets) < 2:
+                continue
+            tag_id = f"if:tag:{tag}"
+            cons_id = f"det:consensus:{fam}:{tag}"
+            add_node(cons_id, "ConsensusDetection",
+                     f"consensus:{fam}/{tag} ({len(dets)} detectors)", "consensus_analysis")
+            add_edge(tag_id, "det:hasConsensus", cons_id, weight=float(len(dets)), context=fam)
+            for d in dets:
+                det_id = f"det:detector:{d}"
+                add_node(det_id, "Detector", d, "ml_evaluation.json")
+                add_edge(cons_id, "det:confirmedBy", det_id, context=fam)
+
     for rr in rule_rows:
         fam = rr["family"]
         tag = rr["tag"]
@@ -602,10 +701,15 @@ def build_semantic_graph(
     edges_path = os.path.join(output_dir, "if_ontology_edges.csv")
 
     with open(nodes_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["node_id", "node_type", "label", "source"])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["node_id", "node_type", "label", "source", "auc_roc", "f1", "recall", "fpr"],
+            extrasaction="ignore",
+        )
         writer.writeheader()
         for n in sorted(nodes.values(), key=lambda x: x["node_id"]):
-            writer.writerow(n)
+            row = {k: n.get(k, "") for k in writer.fieldnames}
+            writer.writerow(row)
 
     with open(edges_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["src", "predicate", "dst", "weight", "context"])
@@ -656,7 +760,7 @@ def build_semantic_graph(
     nx.write_graphml(g, graphml_path)
 
     report_path = os.path.join(output_dir, "if_interpretability_report.md")
-    _write_report(report_path, df_if, rule_rows)
+    _write_report(report_path, df_if, rule_rows, df_all=df_all)
 
     return {
         "nodes": nodes_path,
@@ -678,7 +782,8 @@ def _expected_subsystem(tag: str) -> str:
     return "Unknown"
 
 
-def _write_report(path: str, df_if: pd.DataFrame, rule_rows: list[dict[str, Any]]) -> None:
+def _write_report(path: str, df_if: pd.DataFrame, rule_rows: list[dict[str, Any]],
+                  df_all: pd.DataFrame | None = None) -> None:
     lines: list[str] = []
     lines.append("# IsolationForest + Ontology Interpretability Report")
     lines.append("")
@@ -759,15 +864,44 @@ def _write_report(path: str, df_if: pd.DataFrame, rule_rows: list[dict[str, Any]
     lines.append("- For rule extraction, this report fits an interpretable IF mode (no PCA, no rotation) to recover direct feature split rules.")
     lines.append("- This yields human-readable rules that can be attached to ontology classes and subsystem concepts.")
 
+    if df_all is not None and not df_all.empty:
+        lines.append("")
+        lines.append("## Multi-Detector Performance Summary")
+        lines.append("")
+        lines.append("Mean AUC-ROC and F1 per detector across all families, tiers, and variants:")
+        lines.append("")
+        summary = (
+            df_all.groupby("detector", as_index=False)
+            .agg(mean_auc=("auc_roc", "mean"), mean_f1=("f1", "mean"), mean_recall=("recall", "mean"))
+            .sort_values("mean_auc", ascending=False)
+        )
+        for _, r in summary.iterrows():
+            auc = f"{float(r['mean_auc']):.3f}" if not np.isnan(float(r["mean_auc"])) else "N/A"
+            f1  = f"{float(r['mean_f1']):.3f}"  if not np.isnan(float(r["mean_f1"]))  else "N/A"
+            rec = f"{float(r['mean_recall']):.3f}" if not np.isnan(float(r["mean_recall"])) else "N/A"
+            lines.append(f"- **{r['detector']}**: AUC-ROC={auc}, F1={f1}, Recall={rec}")
+        lines.append("")
+        lines.append("Consensus detection (>= 0.5 recall from >= 2 detectors) by anomaly tag:")
+        lines.append("")
+        recall_by = df_all.groupby(["family", "tag", "detector"])["recall"].mean().reset_index()
+        confirmed = recall_by[recall_by["recall"] >= 0.5].groupby(["family", "tag"])["detector"].apply(list)
+        shown = 0
+        for (fam, tag), dets in confirmed.items():
+            if len(dets) >= 2:
+                lines.append(f"- {fam}/{tag}: confirmed by {', '.join(sorted(dets))}")
+                shown += 1
+        if shown == 0:
+            lines.append("No consensus detections found (no tag had recall >= 0.5 from >= 2 detectors).")
+
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Build ontology-linked IF interpretability knowledge graph.")
-    ap.add_argument("--results-dir", default="results", help="Path to results directory")
-    ap.add_argument("--ontology", default="satellitesystem.owl", help="Path to ontology OWL file")
-    ap.add_argument("--output-dir", default=os.path.join("results", "semantic"), help="Output directory")
+    ap.add_argument("--results-dir", default=os.path.join("results", "satellite"), help="Path to results directory")
+    ap.add_argument("--ontology", default=os.path.join("results", "ontologies", "satellitesystem.owl"), help="Path to ontology OWL file")
+    ap.add_argument("--output-dir", default=os.path.join("results", "satellite", "semantic"), help="Output directory")
     ap.add_argument("--max-tags-per-family", type=int, default=12, help="Max tags per family for path-rule extraction")
     args = ap.parse_args()
 

@@ -729,17 +729,10 @@ def run_injections(
     pd.DataFrame(summary_rows).to_csv(os.path.join(injected_dir, "injection_summary.csv"), index=False)
 
     total_data = sum(2 if target == "cdh+adcs" else 1 for _, target, _, _ in files_generated)
-    print("\n" + "=" * 64)
-    print(f"Injection summary - output: {injected_dir}/")
-    print("=" * 64)
-    print(f"  {'Type':<34} {'Tier':<8} {'Target':<10} {'Variants':>8}")
-    print("  " + "-" * 68)
-    for row in summary_rows:
-        print(f"  {row['type']:<34} {row['tier']:<8} {row['target']:<10} {row['variants']:>8}")
-    print("  " + "-" * 68)
-    print(f"  Total data files   : {total_data}")
-    print(f"  Total label files  : {len(files_generated)}")
-    print("=" * 64)
+    n_types = len({row["type"] for row in summary_rows})
+    tiers = sorted({row["tier"] for row in summary_rows})
+    print(f"  [M4] Injection: {n_types} fault types × {len(tiers)} tiers × 2 variants "
+          f"= {len(files_generated)} labelled files → {injected_dir}/")
 
     try:
         from scripts.evaluator import (
@@ -748,16 +741,33 @@ def run_injections(
             save_ml_results,
             save_ml_tier_metrics,
         )
-        from scripts.plotter import plot_all_ml_evaluation
+        from scripts.utils.plotter import plot_all_ml_evaluation
 
         print("        Running ML evaluation (ZScore / RobustRollingZScore / IsoForest / Autoencoder) ...")
         ml_results = run_ml_evaluation(injected_dir, files_generated, cdh, adcs)
         if ml_results:
-            ml_path = save_ml_results(ml_results, injected_dir)
+            ml_path  = save_ml_results(ml_results, injected_dir)
             tier_path = save_ml_tier_metrics(ml_results, injected_dir)
-            print(f"        ML results saved : {ml_path}")
-            print(f"        Tier metrics saved: {tier_path}")
-            print_ml_summary(ml_results)
+            # Compact per-detector AUC-ROC / AUC-PR summary (averaged across all variants)
+            by_det: dict[str, list] = {}
+            by_det_pr: dict[str, list] = {}
+            for r in ml_results:
+                if "error" in r:
+                    continue
+                d = r.get("detector", "?")
+                by_det.setdefault(d, []).append(r.get("auc_roc", float("nan")))
+                by_det_pr.setdefault(d, []).append(r.get("auc_pr", float("nan")))
+            import math
+            parts = " | ".join(
+                f"{d}: {sum(v for v in vals if not math.isnan(v)) / max(1, sum(1 for v in vals if not math.isnan(v))):.3f}"
+                for d, vals in by_det.items()
+            )
+            parts_pr = " | ".join(
+                f"{d}: {sum(v for v in vals if not math.isnan(v)) / max(1, sum(1 for v in vals if not math.isnan(v))):.3f}"
+                for d, vals in by_det_pr.items()
+            )
+            print(f"  [M5] AUC-ROC(total): {parts}")
+            print(f"  [M5] AUC-PR (total): {parts_pr}")
             plot_all_ml_evaluation(ml_results, output_dir=injected_dir)
     except Exception as exc:
         print(f"        [WARN] ML evaluation failed: {exc}")
