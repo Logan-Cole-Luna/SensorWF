@@ -35,14 +35,16 @@ import os
 import time
 from typing import Any
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from scripts.adapters.ecg import ECGAdapter
-from scripts.pipeline_core import run_quality_assessment, save_quality_report
+from scripts.pipeline_core import (
+    run_quality_assessment,
+    save_quality_report,
+    build_semantic_kg,
+    plot_channels,
+)
 from scripts.evaluator import build_generic_feature_matrix
 from scripts.provenance_recorder import ProvenanceRecorder
 
@@ -61,95 +63,6 @@ _RESULTS_DIR      = os.path.join("results", "ECG", "mitdb")
 _SEED             = 42
 _WINDOW           = 100    # rolling window in samples (2 s at 50 Hz)
 _SESSION_MINUTES  = 5.0    # ECG session duration
-
-
-# ===========================================================================
-# M4 -- ECG semantic annotation (lightweight KG builder)
-# ===========================================================================
-
-def _build_ecg_kg(
-    feature_names: list[str],
-    ontology_path: str,
-    out_dir: str,
-    ml_results: list[dict] | None = None,
-) -> None:
-    """Build a minimal ontology-linked KG for ECG domain.
-
-    ml_results: optional M5 output; if provided, IF importances weight edges.
-    Outputs nodes_csv, edges_csv, and a summary Turtle stub.
-    """
-    os.makedirs(out_dir, exist_ok=True)
-
-    # ECG class → feature prefix mapping
-    class_map = {
-        "MLII":                  "ecg:MLII",
-        "V5":                    "ecg:V5",
-        "d_MLII":                "ecg:MLII",
-        "d_V5":                  "ecg:V5",
-        "rm_MLII":               "ecg:MLII",
-        "rs_MLII":               "ecg:MLII",
-        "rm_V5":                 "ecg:V5",
-        "rs_V5":                 "ecg:V5",
-        "BaselineWander":        "ecg:BaselineWander",
-        "ElectrodeDropout":      "ecg:ElectrodeDropout",
-        "EMGArtifact":           "ecg:EMGArtifact",
-        "PowerLineInterference": "ecg:PowerLineInterference",
-    }
-
-    importances: dict[str, float] = {}
-    if ml_results:
-        for row in ml_results:
-            if row.get("detector") == "IsolationForest" and "if_importances" in row:
-                imp_list = row["if_importances"]
-                fn       = row.get("if_feature_names", feature_names)
-                for feat, imp in zip(fn, imp_list):
-                    importances[feat] = max(importances.get(feat, 0.0), float(imp))
-
-    nodes = []
-    edges = []
-
-    for feat in feature_names:
-        nodes.append({"node_id": feat, "node_type": "feature", "label": feat})
-
-    seen_classes: set[str] = set()
-    for feat, cls in class_map.items():
-        if feat in feature_names and cls not in seen_classes:
-            local = cls.split(":")[-1]
-            nodes.append({"node_id": cls, "node_type": "ontologyclass", "label": local})
-            seen_classes.add(cls)
-            edges.append({
-                "source":   feat,
-                "target":   cls,
-                "relation": "evidenceForClass",
-                "weight":   importances.get(feat, 0.001),
-            })
-
-    if ml_results:
-        fault_tags = set(r["tag"] for r in ml_results if "tag" in r)
-        for tag in fault_tags:
-            nodes.append({"node_id": tag, "node_type": "anomalytag", "label": tag})
-            for feat in feature_names[:3]:
-                edges.append({
-                    "source":   feat,
-                    "target":   tag,
-                    "relation": "relatedFault",
-                    "weight":   importances.get(feat, 0.001),
-                })
-
-    pd.DataFrame(nodes).to_csv(os.path.join(out_dir, "ecg_kg_nodes.csv"), index=False)
-    pd.DataFrame(edges).to_csv(os.path.join(out_dir, "ecg_kg_edges.csv"), index=False)
-
-    ttl = (
-        "@prefix ecg: <https://example.org/sensorwf/ecg#> .\n"
-        "@prefix if:  <https://example.org/sensorwf/if#> .\n\n"
-    )
-    for _, row in pd.DataFrame(edges).iterrows():
-        ttl += (f"<{row['source']}> if:evidenceForClass <{row['target']}> ;\n"
-                f"    if:featureImportance {row['weight']:.6f} .\n")
-    with open(os.path.join(out_dir, "ecg_kg.ttl"), "w") as fh:
-        fh.write(ttl)
-
-    print(f"  [M4] ECG KG: {len(nodes)} nodes, {len(edges)} edges → {out_dir}")
 
 
 # ===========================================================================
@@ -225,21 +138,9 @@ def run_ecg_record(
     df.to_csv(clean_csv, index=False)
 
     # ── Overview plot ────────────────────────────────────────────────────
-    fig, axes = plt.subplots(len(channels), 1, figsize=(10, 3 * len(channels)),
-                             sharex=True)
-    if len(channels) == 1:
-        axes = [axes]
-    for ax, ch in zip(axes, channels):
-        ax.plot(df["elapsed_s"].values, df[ch].values, lw=0.5, color="#1565C0")
-        ax.set_ylabel(ch, fontsize=9)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-    axes[-1].set_xlabel("Elapsed time (s)", fontsize=9)
-    fig.suptitle(f"MIT-BIH Record {record_id} -- {_SESSION_MINUTES:.0f}-min ECG Session "
-                 f"(Z-score normalised, {adapter.target_hz:.0f} Hz)", fontsize=10)
-    fig.savefig(os.path.join(record_dir, "plots", "01_signal_overview.png"),
-                dpi=150, bbox_inches="tight")
-    plt.close(fig)
+    plot_channels(df, adapter.get_plot_groups(),
+                  os.path.join(record_dir, "plots"),
+                  title_prefix=f"MIT-BIH {record_id}")
 
     # ── M3: Feature Engineering ─────────────────────────────────────────
     t0 = time.time()
@@ -260,14 +161,22 @@ def run_ecg_record(
 
     # ── M4: Semantic Annotation ─────────────────────────────────────────
     t0 = time.time()
-    _build_ecg_kg(feat_names, adapter.get_ontology_path(), sem_dir)
+    m4_arts = build_semantic_kg(
+        feature_names = feat_names,
+        class_map     = adapter.get_class_map(),
+        output_dir    = sem_dir,
+        ontology_path = adapter.ensure_ontology(),
+        file_prefix   = "ecg_",
+        domain_uri    = "https://sensorwf.org/ontologies/ecg",
+    )
     t_m6 = time.time() - t0
+    print(f"  [M4] ECG KG: {len(m4_arts)} artefacts → {sem_dir}")
 
     if recorder:
         recorder.record_activity(
             "M4_ECG_SemanticAnnotation",
-            inputs={"ontology": adapter.get_ontology_path()},
-            outputs={"kg_dir": sem_dir},
+            inputs={"ontology": adapter.ensure_ontology()},
+            outputs={k: v for k, v in m4_arts.items()},
             params={},
         )
 

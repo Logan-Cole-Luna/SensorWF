@@ -366,8 +366,201 @@ def save_quality_report(report: dict, path: str) -> None:
         json.dump(report, fh, indent=2)
 
 
+def write_owl_if_missing(path: str, content: str) -> str:
+    """Write OWL/RDF content to path if the file does not yet exist.
+
+    Called by DomainAdapter.ensure_ontology() so every domain generates
+    its ontology at runtime on first run — no manually managed static files.
+    Returns the (possibly newly created) file path.
+    """
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(content)
+    return path
+
+
 def make_elapsed(df: pd.DataFrame, dt_s: float) -> pd.DataFrame:
     """Add elapsed_s column from row index when timestamps unavailable."""
     df = df.copy()
     df["elapsed_s"] = np.arange(len(df), dtype=float) * dt_s
     return df
+
+
+# ---------------------------------------------------------------------------
+# M4 -- Generic semantic annotation (KG builder)
+# ---------------------------------------------------------------------------
+
+_FEATURE_PREFIXES = ("d_", "rm_", "rs_", "sk_", "ku_", "zcr_", "se_", "df_")
+
+
+def _base_channel(feat: str) -> str:
+    """Strip standard feature prefix to recover the underlying channel name."""
+    for pfx in _FEATURE_PREFIXES:
+        if feat.startswith(pfx):
+            return feat[len(pfx):]
+    return feat
+
+
+def build_semantic_kg(
+    feature_names: list[str],
+    class_map: dict[str, str],
+    output_dir: str,
+    ontology_path: str = "",
+    ml_importances: dict[str, float] | None = None,
+    file_prefix: str = "",
+    domain_uri: str = "https://sensorwf.org/ontologies",
+) -> dict[str, str]:
+    """
+    Build a lightweight ontology-linked knowledge graph from feature names.
+
+    Parameters
+    ----------
+    feature_names   : list of feature column names from M3
+    class_map       : {channel_name_or_prefix: ontology_class_uri}
+                      Exact match is tried first, then prefix match.
+    output_dir      : directory to write artefacts
+    ontology_path   : path to domain OWL file (recorded in Turtle header)
+    ml_importances  : optional {feature_name: importance} from IsolationForest
+    file_prefix     : prepended to output filenames (e.g. "ecg_")
+    domain_uri      : base URI for the Turtle document
+
+    Returns
+    -------
+    dict of {artefact_key: file_path}
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    importances = ml_importances or {}
+
+    nodes: list[dict] = []
+    edges: list[dict] = []
+    seen_classes: set[str] = set()
+
+    for feat in feature_names:
+        nodes.append({"node_id": feat, "node_type": "feature", "label": feat})
+        base = _base_channel(feat)
+
+        # Resolve class: exact match on feature, then base channel, then prefix scan
+        cls = class_map.get(feat) or class_map.get(base)
+        if cls is None:
+            for key, val in class_map.items():
+                if base.upper().startswith(key.upper()) or key.upper() in base.upper():
+                    cls = val
+                    break
+
+        if cls is None:
+            continue
+
+        if cls not in seen_classes:
+            local = cls.split(":")[-1] if ":" in cls else cls.rsplit("/", 1)[-1]
+            nodes.append({"node_id": cls, "node_type": "ontologyclass", "label": local})
+            seen_classes.add(cls)
+
+        edges.append({
+            "source":   feat,
+            "target":   cls,
+            "relation": "evidenceForClass",
+            "weight":   importances.get(feat, 0.001),
+        })
+
+    fp = file_prefix
+    nodes_path = os.path.join(output_dir, f"{fp}kg_nodes.csv")
+    edges_path = os.path.join(output_dir, f"{fp}kg_edges.csv")
+    ttl_path   = os.path.join(output_dir, f"{fp}kg.ttl")
+
+    import pandas as _pd
+    _pd.DataFrame(nodes).to_csv(nodes_path, index=False)
+    _pd.DataFrame(edges).to_csv(edges_path, index=False)
+
+    ttl_lines = [
+        f"@base <{domain_uri}> .",
+        "@prefix if:   <https://sensorwf.org/interpretability#> .",
+        "@prefix prov: <http://www.w3.org/ns/prov#> .",
+        "",
+    ]
+    if ontology_path:
+        ttl_lines.append(f"# Ontology: {ontology_path}")
+    for row in _pd.DataFrame(edges).itertuples(index=False):
+        ttl_lines.append(
+            f"<{row.source}> if:evidenceForClass <{row.target}> ;\n"
+            f"    if:featureImportance {row.weight:.6f} ."
+        )
+    with open(ttl_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(ttl_lines) + "\n")
+
+    return {"nodes_csv": nodes_path, "edges_csv": edges_path, "turtle": ttl_path}
+
+
+# ---------------------------------------------------------------------------
+# Generic visualisation -- time-series channel overview
+# ---------------------------------------------------------------------------
+
+def plot_channels(
+    df: pd.DataFrame,
+    channel_groups: dict[str, list[str]],
+    output_dir: str,
+    title_prefix: str = "",
+    dpi: int = 150,
+) -> list[str]:
+    """
+    Produce one PNG per channel group as a multi-panel time-series figure.
+
+    Parameters
+    ----------
+    df             : DataFrame with elapsed_s and sensor columns
+    channel_groups : {group_name: [channel_names]}  (missing channels skipped)
+    output_dir     : directory for PNG output
+    title_prefix   : prepended to each figure title
+    dpi            : output resolution
+
+    Returns
+    -------
+    List of saved file paths (one per non-empty group).
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    os.makedirs(output_dir, exist_ok=True)
+    saved: list[str] = []
+    x_col = "elapsed_s" if "elapsed_s" in df.columns else None
+
+    palette = [
+        "#1565C0", "#C62828", "#2E7D32", "#6A1B9A", "#E65100",
+        "#00695C", "#4527A0", "#AD1457", "#558B2F", "#0277BD",
+    ]
+
+    for idx, (group_name, channels) in enumerate(channel_groups.items(), start=1):
+        cols = [c for c in channels if c in df.columns]
+        if not cols:
+            continue
+
+        n = len(cols)
+        fig, axes = plt.subplots(n, 1, figsize=(10, max(2.5, 1.8 * n)), sharex=True)
+        if n == 1:
+            axes = [axes]
+
+        x = df[x_col].values if x_col else np.arange(len(df))
+        x_label = "Elapsed time (s)"
+
+        for ax, ch, color in zip(axes, cols, (palette * ((n // len(palette)) + 1))):
+            y = pd.to_numeric(df[ch], errors="coerce").values
+            ax.plot(x, y, lw=0.6, color=color)
+            ax.set_ylabel(ch, fontsize=8, labelpad=2)
+            ax.tick_params(labelsize=7)
+            for spine in ("top", "right"):
+                ax.spines[spine].set_visible(False)
+
+        axes[-1].set_xlabel(x_label, fontsize=9)
+        title = f"{title_prefix} — {group_name}" if title_prefix else group_name
+        fig.suptitle(title, fontsize=9, y=1.01)
+        fig.tight_layout()
+
+        slug = group_name.lower().replace(" ", "_").replace("/", "_")
+        fname = f"{idx:02d}_{slug}.png"
+        path  = os.path.join(output_dir, fname)
+        fig.savefig(path, dpi=dpi, bbox_inches="tight")
+        plt.close(fig)
+        saved.append(path)
+
+    return saved

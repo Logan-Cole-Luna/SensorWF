@@ -741,7 +741,6 @@ def run_injections(
             save_ml_results,
             save_ml_tier_metrics,
         )
-        from scripts.satellite.plotter import plot_all_ml_evaluation
 
         print("        Running ML evaluation (ZScore / RobustRollingZScore / IsoForest / Autoencoder) ...")
         ml_results = run_ml_evaluation(injected_dir, files_generated, cdh, adcs)
@@ -768,6 +767,5 @@ def run_injections(
             )
             print(f"  [M5] AUC-ROC(total): {parts}")
             print(f"  [M5] AUC-PR (total): {parts_pr}")
-            plot_all_ml_evaluation(ml_results, output_dir=injected_dir)
     except Exception as exc:
         print(f"        [WARN] ML evaluation failed: {exc}")

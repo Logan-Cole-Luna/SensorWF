@@ -25,7 +25,7 @@ import numpy as np
 
 from .base import DomainAdapter
 
-_NATIVE_HZ = 360.0
+_NATIVE_HZ  = 360.0
 _TARGET_HZ  = 50.0
 _DECIMATE   = int(round(_NATIVE_HZ / _TARGET_HZ))   # = 7, giving ~51.4 Hz
 
@@ -159,6 +159,20 @@ class ECGAdapter(DomainAdapter):
 
     def get_ontology_path(self) -> str:
         return os.path.join("results", "ontologies", "ecg.owl")
+
+    def get_class_map(self) -> dict[str, str]:
+        _BASE = "https://sensorwf.org/ontologies/ecg#"
+        return {
+            "MLII":                  f"{_BASE}MLII",
+            "V5":                    f"{_BASE}V5",
+            "BaselineWander":        f"{_BASE}BaselineWander",
+            "ElectrodeDropout":      f"{_BASE}ElectrodeDropout",
+            "EMGArtifact":           f"{_BASE}EMGArtifact",
+            "PowerLineInterference": f"{_BASE}PowerLineInterference",
+        }
+
+    def get_plot_groups(self) -> dict[str, list[str]]:
+        return {"ECG Leads": list(self.channels)}
 
     def get_fault_types(self) -> list[dict]:
         return [

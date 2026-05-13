@@ -20,14 +20,14 @@ Prerequisites
 Outputs
 ───────
   results/satellite/<Family>/injected/
-    injection_summary.csv    -- M4 fault manifest
+    injection_summary.csv    -- E1 fault manifest
     signal_injected_*.csv    -- injected signal variants
     labels_*.csv             -- ground-truth anomaly labels
-    ml_evaluation.json       -- per-variant per-detector metrics (M5)
-    ml_metrics_by_tier.csv   -- tier-aggregated metrics (M5)
+    ml_evaluation.json       -- per-variant per-detector metrics (E2)
+    ml_metrics_by_tier.csv   -- tier-aggregated metrics (E2)
 
-  results/satellite/semantic/ -- enhanced M6 KG with ML importances
-  results/satellite/provenance.ttl -- M7 provenance (appended)
+  results/satellite/semantic/ -- enhanced M4 KG with ML importances
+  results/satellite/anomaly_provenance.ttl -- M5 provenance trace
 
 Usage
 ─────
@@ -38,34 +38,60 @@ Usage
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from datetime import datetime, timezone
 
+import numpy as np
 import pandas as pd
 
 from scripts.utils.injector import run_injections
-from scripts.satellite.semantic_kg import build_semantic_graph
-from scripts.satellite.ontology import generate_satellite_ontology
+from scripts.adapters.satellite import SatelliteAdapter
+from scripts.pipeline_core import build_semantic_kg
 from scripts.provenance_recorder import ProvenanceRecorder
 from scripts.workflow import E1_FAULT_INJECTION, E2_DETECTION, M4_SEMANTIC
 
-_RESULTS_DIR  = os.path.join("results", "satellite")
+_RESULTS_DIR   = os.path.join("results", "satellite")
 _ONTOLOGY_PATH = os.path.join("results", "ontologies", "satellitesystem.owl")
-_ALL_FAMILIES = [
+_ALL_FAMILIES  = [
     "AccelerometerTest", "GyroTest", "ReactionWheelTest", "ThermalTest",
 ]
+
+
+def _load_ml_importances(results_dir: str) -> dict[str, float]:
+    """Aggregate IsolationForest feature importances across all family ml_evaluation.json files."""
+    acc: dict[str, list[float]] = {}
+    for family in sorted(os.listdir(results_dir)):
+        ml_json = os.path.join(results_dir, family, "injected", "ml_evaluation.json")
+        if not os.path.isfile(ml_json):
+            continue
+        try:
+            data = json.loads(open(ml_json, encoding="utf-8").read())
+        except Exception:
+            continue
+        if not isinstance(data, list):
+            continue
+        for r in data:
+            if r.get("detector") != "IsolationForest":
+                continue
+            imps  = r.get("feature_importances") or []
+            names = r.get("feature_names") or []
+            for feat, imp in zip(names, imps):
+                acc.setdefault(str(feat), []).append(float(imp))
+    return {k: float(sum(v) / len(v)) for k, v in acc.items() if v}
 
 
 def run_sat_anomaly(
     families: list[str],
     results_dir: str,
-    ontology_path: str,
     seed: int,
     n_variants: int,
     tiers: list[str] | None,
     recorder: ProvenanceRecorder,
 ) -> None:
-    """Run M4 + M5 for each satellite family, consuming core pipeline outputs."""
+    """Run E1 + E2 for each satellite family, then rebuild M4 KG with ML importances."""
+    adapter = SatelliteAdapter()
+
     for family in families:
         output_dir   = os.path.join(results_dir, family)
         injected_dir = os.path.join(output_dir, "injected")
@@ -80,61 +106,68 @@ def run_sat_anomaly(
         cdh  = pd.read_csv(cdh_path,  low_memory=False)
         adcs = pd.read_csv(adcs_path, low_memory=False) if os.path.isfile(adcs_path) else pd.DataFrame()
 
-        cdh_cols  = [c for c in cdh.columns  if c not in {"timestamp", "elapsed_s"}]
-        adcs_cols = [c for c in adcs.columns if c not in {"timestamp", "elapsed_s"}]
+        adapter.cdh_channels  = [c for c in cdh.columns  if c not in {"timestamp", "elapsed_s"}]
+        adapter.adcs_channels = [c for c in adcs.columns if c not in {"timestamp", "elapsed_s"}]
+        ontology_path = adapter.get_ontology_path()
 
-        generate_satellite_ontology(ontology_path, cdh_cols, adcs_cols)
-
-        m4_start = datetime.now(timezone.utc)
+        e1_start = datetime.now(timezone.utc)
         try:
             run_injections(cdh, adcs, output_dir,
                            seed=seed, n_variants=n_variants, tiers=tiers)
         except Exception as exc:
             print(f"  ERROR in E1/E2 for {family}: {exc}")
-        m4_end = datetime.now(timezone.utc)
+        e1_end = datetime.now(timezone.utc)
 
         ml_json_path = os.path.join(injected_dir, "ml_evaluation.json")
 
         recorder.record(E1_FAULT_INJECTION,
-            inputs  = {"cdh_clean": {"path": cdh_path,  "rows": len(cdh)},
+            inputs  = {"cdh_clean":  {"path": cdh_path,  "rows": len(cdh)},
                        "adcs_clean": {"path": adcs_path, "rows": len(adcs)},
                        "seed": seed, "n_variants": n_variants},
             outputs = {"injected_variants": {"path": injected_dir},
                        "injection_summary": {"path": os.path.join(injected_dir, "injection_summary.csv")}},
-            start_time=m4_start, end_time=m4_end, experiment=family,
+            start_time=e1_start, end_time=e1_end, experiment=family,
         )
         recorder.record(E2_DETECTION,
             inputs  = {"injected_variants": {"path": injected_dir},
-                       "cdh_clean": {"rows": len(cdh)},
+                       "cdh_clean":  {"rows": len(cdh)},
                        "adcs_clean": {"rows": len(adcs)}},
             outputs = {"ml_evaluation_json": {"path": ml_json_path},
                        "ml_metrics_csv": {"path": os.path.join(injected_dir, "ml_metrics_by_tier.csv")}},
-            start_time=m4_start, end_time=m4_end, experiment=family,
+            start_time=e1_start, end_time=e1_end, experiment=family,
         )
 
-    # ── Enhanced M6: rebuild KG with ML importances ─────────────────────────
+    # ── Enhanced M4: rebuild KG with aggregated ML importances ─────────────
     print(f"\n  [M4] Building enhanced semantic KG with ML importances ...")
     semantic_out_dir = os.path.join(results_dir, "semantic")
-    m6_start = datetime.now(timezone.utc)
-    m6_artifacts: dict = {}
+    m4_start = datetime.now(timezone.utc)
+    m4_artifacts: dict = {}
     try:
-        m6_artifacts = build_semantic_graph(
-            results_dir=results_dir,
-            ontology_path=ontology_path,
-            output_dir=semantic_out_dir,
-        )
-        for k, v in m6_artifacts.items():
-            print(f"    {k}: {v}")
+        ml_importances = _load_ml_importances(results_dir)
+        feat_names = list(ml_importances.keys())
+        if feat_names:
+            m4_artifacts = build_semantic_kg(
+                feature_names  = feat_names,
+                class_map      = adapter.get_class_map(),
+                output_dir     = semantic_out_dir,
+                ontology_path  = ontology_path,
+                ml_importances = ml_importances,
+                file_prefix    = "sat_enhanced_",
+                domain_uri     = "https://sensorwf.org/ontologies/satellite",
+            )
+            for k, v in m4_artifacts.items():
+                print(f"    {k}: {v}")
+        else:
+            print("    No ML importances found — skipping enhanced KG")
     except Exception as exc:
-        print(f"  WARNING: M6 enhanced KG failed: {exc}")
-    m6_end = datetime.now(timezone.utc)
+        print(f"  WARNING: M4 enhanced KG failed: {exc}")
+    m4_end = datetime.now(timezone.utc)
 
-    if m6_artifacts:
+    if m4_artifacts:
         recorder.record(M4_SEMANTIC,
-            inputs  = {"ml_evaluation_json": {"path": os.path.join(results_dir, "**", "injected", "ml_evaluation.json")},
-                       "ontology_owl": {"path": ontology_path}},
-            outputs = {k: {"path": str(v)} for k, v in m6_artifacts.items()},
-            start_time=m6_start, end_time=m6_end,
+            inputs  = {"ontology_owl": {"path": ontology_path}},
+            outputs = {k: {"path": str(v)} for k, v in m4_artifacts.items()},
+            start_time=m4_start, end_time=m4_end,
         )
 
 
@@ -143,9 +176,7 @@ def main():
         description="SensorWF satellite anomaly detection use case (E1 + E2)")
     parser.add_argument("--families",    nargs="*", metavar="NAME",
                         help="Experiment families (default: all 4)")
-    parser.add_argument("--results-dir", default=_RESULTS_DIR,
-                        help="Core pipeline results dir (default: results/satellite)")
-    parser.add_argument("--ontology",    default=_ONTOLOGY_PATH)
+    parser.add_argument("--results-dir", default=_RESULTS_DIR)
     parser.add_argument("--seed",        type=int, default=42)
     parser.add_argument("--n-variants",  type=int, default=2)
     parser.add_argument("--fast",        action="store_true",
@@ -154,9 +185,6 @@ def main():
 
     families = args.families if args.families else _ALL_FAMILIES
     tiers    = ["easy"] if args.fast else None
-
-    if not os.path.isfile(args.ontology):
-        generate_satellite_ontology(args.ontology)
 
     run_ts   = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     recorder = ProvenanceRecorder(workflow_run_id=f"sensorwf_sat_anomaly_{run_ts}")
@@ -170,7 +198,6 @@ def main():
     run_sat_anomaly(
         families=families,
         results_dir=args.results_dir,
-        ontology_path=args.ontology,
         seed=args.seed,
         n_variants=args.n_variants,
         tiers=tiers,

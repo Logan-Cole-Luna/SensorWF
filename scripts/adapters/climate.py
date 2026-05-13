@@ -20,7 +20,7 @@ import numpy as np
 
 from .base import DomainAdapter
 
-_INTERVAL_MINUTES = 10
+_INTERVAL_MINUTES  = 10
 _INTERVAL_S       = _INTERVAL_MINUTES * 60.0      # 600 s
 
 # Map CSV column names → clean snake_case names
@@ -127,6 +127,34 @@ class ClimateAdapter(DomainAdapter):
 
     def get_ontology_path(self) -> str:
         return os.path.join("results", "ontologies", "climate.owl")
+
+    def get_class_map(self) -> dict[str, str]:
+        _BASE = "https://sensorwf.org/ontologies/climate#"
+        return {
+            "T_degC":        f"{_BASE}Temperature",
+            "Tpot_K":        f"{_BASE}PotentialTemperature",
+            "Tdew_degC":     f"{_BASE}DewPointTemperature",
+            "p_mbar":        f"{_BASE}AtmosphericPressure",
+            "rh_pct":        f"{_BASE}RelativeHumidity",
+            "sh_gkg":        f"{_BASE}SpecificHumidity",
+            "H2OC_mmolmol":  f"{_BASE}WaterVapourConcentration",
+            "VPmax_mbar":    f"{_BASE}SaturationVapourPressure",
+            "VPact_mbar":    f"{_BASE}ActualVapourPressure",
+            "VPdef_mbar":    f"{_BASE}VapourPressureDeficit",
+            "rho_gm3":       f"{_BASE}AirDensity",
+            "wv_ms":         f"{_BASE}WindSpeed",
+            "max_wv_ms":     f"{_BASE}MaxWindSpeed",
+            "wd_deg":        f"{_BASE}WindDirection",
+        }
+
+    def get_plot_groups(self) -> dict[str, list[str]]:
+        return {
+            "Temperature":  ["T_degC", "Tpot_K", "Tdew_degC"],
+            "Pressure / Humidity": ["p_mbar", "rh_pct", "sh_gkg", "H2OC_mmolmol"],
+            "Vapour Pressure": ["VPmax_mbar", "VPact_mbar", "VPdef_mbar"],
+            "Wind":         ["wv_ms", "max_wv_ms", "wd_deg"],
+            "Air Density":  ["rho_gm3"],
+        }
 
     def get_fault_types(self) -> list[dict]:
         return [
