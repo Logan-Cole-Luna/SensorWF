@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-C1_packet_gap_jitter,411,418,high,['elapsed_s'],hard

@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A2_gyro_saturation,720,1241,high,['GYRO_Z'],hard

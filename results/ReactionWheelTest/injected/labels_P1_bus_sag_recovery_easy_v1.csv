@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-P1_bus_sag_recovery,431,503,low,"['SYS_V', 'BATT_CHR_V', 'SYS_I']",easy

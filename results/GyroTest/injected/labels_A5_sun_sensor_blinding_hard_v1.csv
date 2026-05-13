@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A5_sun_sensor_blinding,675,931,high,"[np.str_('SUN_SENSOR_1a'), np.str_('SUN_SENSOR_1b'), np.str_('SUN_SENSOR_3a')]",hard

@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-C1_packet_gap,9593,9605,medium,['elapsed_s'],medium

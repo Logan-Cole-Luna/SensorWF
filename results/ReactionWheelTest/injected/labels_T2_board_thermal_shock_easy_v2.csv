@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-T2_board_thermal_shock,1125,1213,low,['TEMP_ADCS'],easy

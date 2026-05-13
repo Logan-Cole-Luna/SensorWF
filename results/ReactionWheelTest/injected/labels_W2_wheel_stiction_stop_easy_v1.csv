@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-W2_wheel_stiction_stop,263,363,low,['WHEEL_SPEED'],easy

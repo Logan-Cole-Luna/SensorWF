@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A5_sun_saturation,8030,8958,medium,"[np.str_('SUN_SENSOR_2a'), np.str_('SUN_SENSOR_3b'), np.str_('SUN_SENSOR_1a'), np.str_('SUN_SENSOR_4b')]",easy

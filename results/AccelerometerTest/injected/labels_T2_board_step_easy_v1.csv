@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-T2_board_step,983,1737,low,['TEMP_WHEEL'],easy

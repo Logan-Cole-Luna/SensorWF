@@ -1,0 +1,39 @@
+{
+  "nan_rates": {
+    "MLII": 0.0,
+    "V1": 0.0
+  },
+  "stuck_channels": [],
+  "timing": {
+    "mean_dt_s": 0.0194,
+    "std_dt_s": 0.0,
+    "max_gap_s": 0.0194,
+    "expected_dt_s": 0.0194,
+    "n_large_gaps": 0
+  },
+  "zscore_flags": {
+    "MLII": 12,
+    "V1": 101
+  },
+  "trends": {},
+  "summary": {
+    "n_rows": 15000,
+    "n_channels": 2,
+    "n_good_channels": 2,
+    "n_stuck": 0,
+    "n_zscore_flagged": 2
+  },
+  "annotations": {
+    "n_beats_total": 2301,
+    "n_normal": 2301,
+    "n_abnormal": 0,
+    "beat_type_counts": {
+      "R": 2166,
+      "A": 96,
+      "V": 16,
+      "~": 12,
+      "x": 10,
+      "+": 1
+    }
+  }
+}

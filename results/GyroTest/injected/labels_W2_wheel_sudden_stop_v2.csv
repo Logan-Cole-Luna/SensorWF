@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels
-W2_wheel_sudden_stop,1141,1381,high,['WHEEL_SPEED']

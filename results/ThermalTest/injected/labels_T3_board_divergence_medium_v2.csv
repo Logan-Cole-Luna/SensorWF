@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-T3_board_divergence,6240,18497,medium,"['TEMP_EPS', 'TEMP_BATTERY']",medium

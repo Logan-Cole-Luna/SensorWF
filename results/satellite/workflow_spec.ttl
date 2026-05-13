@@ -1,0 +1,279 @@
+# SensorWF — Generalizable FAIR Sensor Analytics Workflow
+# Static specification: module ports, assumptions, and data-flow channels.
+# Runtime execution provenance is appended by scripts/provenance_recorder.py.
+#
+# Core modules:      M1 DataIngestion, M2 QualityAssessment, M3 FeatureEngineering,
+#                    M4 SemanticAnnotation, M5 ProvenanceExport
+# Extension modules: E1 FaultInjection, E2 AnomalyDetection (use_cases/ only)
+#
+# Ontology alignment:
+#   provone:Program  — computational module
+#   provone:InPort   — input data/parameter slot
+#   provone:OutPort  — output artifact slot
+#   provone:Channel  — data-flow edge between ports
+#   prov:Activity    — a single module execution event (runtime)
+#   prov:Entity      — a data artifact (runtime)
+#
+# Reference:
+#   Missier et al. (2013) ProvONE. DataONE Project.
+#   W3C PROV-O Recommendation (2013). https://www.w3.org/TR/prov-o/
+
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix provone: <http://purl.dataone.org/provone/2015/01/15/ontology#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix sensorwf: <https://example.org/sensorwf/workflow#> .
+@prefix telwf: <https://example.org/telwf/workflow#> .
+
+
+sensorwf:SensorWFWorkflow
+    a provone:Workflow, prov:Plan ;
+    rdfs:label "SensorWF: Generalizable FAIR Sensor Analytics Workflow" ;
+    dc:description "A FAIR-annotated, reproducible workflow for multi-domain sensor "
+        "time-series analysis: data ingestion, quality assessment, feature engineering, "
+        "semantic annotation, and provenance export. Supports satellite telemetry, "
+        "biomedical ECG, and atmospheric climate domains." ;
+    dc:creator "Logan Luna" ;
+    sensorwf:version "1.0" ;
+
+    provone:hasSubProgram
+        sensorwf:M1_DataIngestion,
+        sensorwf:M2_QualityAssessment,
+        sensorwf:M3_FeatureEngineering,
+        sensorwf:M4_SemanticAnnotation,
+        sensorwf:M5_ProvenanceExport .
+
+# ── Data Ingestion ──────────────────────────────────────────
+sensorwf:M1_DataIngestion
+    a provone:Program, prov:Activity ;
+    rdfs:label "Data Ingestion" ;
+    dc:description "Domain-adaptive ingestion that normalises raw sensor archives into a standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface. Supports SCOTTI v2 telemetry, MIT-BIH ECG CSV, and Jena Climate CSV." ;
+    sensorwf:implementedBy "scripts/adapters/" ;
+    provone:hasInPort sensorwf:M1_DataIngestion_in_raw_files,
+    provone:hasInPort sensorwf:M1_DataIngestion_in_adapter_config,
+    provone:hasOutPort sensorwf:M1_DataIngestion_out_clean_df,
+    provone:hasOutPort sensorwf:M1_DataIngestion_out_adapter_meta,
+    sensorwf:hasAssumption "Each domain has a unique raw format handled by its DomainAdapter.",
+    sensorwf:hasAssumption "All adapters return a DataFrame with timestamp (datetime) and elapsed_s (float).",
+    sensorwf:hasAssumption "Downsampling is domain-specific and configured via the adapter."
+.
+
+sensorwf:M1_DataIngestion_in_raw_files
+    a provone:InPort ;
+    rdfs:label "Raw Sensor Archive" ;
+    dc:description "Raw sensor archive (SCOTTI v2 txt, MIT-BIH CSV, Jena Climate CSV)." ;
+    sensorwf:dataType xsd:anyURI .
+
+sensorwf:M1_DataIngestion_in_adapter_config
+    a provone:InPort ;
+    rdfs:label "Adapter Configuration" ;
+    dc:description "Domain adapter parameters (target_hz, session_minutes, year, etc.)." ;
+    sensorwf:dataType xsd:string .
+
+sensorwf:M1_DataIngestion_out_clean_df
+    a provone:OutPort ;
+    rdfs:label "Standardised Time-Series DataFrame" ;
+    dc:description "Standardised time-series with timestamp, elapsed_s, and sensor channels." ;
+    sensorwf:dataType sensorwf:DataFrame .
+
+sensorwf:M1_DataIngestion_out_adapter_meta
+    a provone:OutPort ;
+    rdfs:label "Adapter Metadata" ;
+    dc:description "Adapter name, channels, native_hz, session length." ;
+    sensorwf:dataType xsd:string .
+
+# ── Quality Assessment ──────────────────────────────────────────
+sensorwf:M2_QualityAssessment
+    a provone:Program, prov:Activity ;
+    rdfs:label "Quality Assessment" ;
+    dc:description "Domain-agnostic sensor quality audit: NaN rates, stuck-channel detection, timing regularity, per-channel z-score flagging, and linear trend detection on selected channels. Outputs a machine-readable JSON quality report." ;
+    sensorwf:implementedBy "scripts/pipeline_core.py" ;
+    provone:hasInPort sensorwf:M2_QualityAssessment_in_clean_df,
+    provone:hasInPort sensorwf:M2_QualityAssessment_in_channels,
+    provone:hasInPort sensorwf:M2_QualityAssessment_in_config,
+    provone:hasOutPort sensorwf:M2_QualityAssessment_out_quality_report,
+    sensorwf:hasAssumption "Stuck sensor: <= 3 unique values in a channel across the full session.",
+    sensorwf:hasAssumption "Z-score flag threshold: configurable per domain (default 3.0 sigma).",
+    sensorwf:hasAssumption "Timing gap threshold: expected_dt * gap_multiplier (domain-specific)."
+.
+
+sensorwf:M2_QualityAssessment_in_clean_df
+    a provone:InPort ;
+    rdfs:label "Standardised Time-Series" ;
+    dc:description "Standardised time-series from M1." ;
+    sensorwf:dataType sensorwf:DataFrame .
+
+sensorwf:M2_QualityAssessment_in_channels
+    a provone:InPort ;
+    rdfs:label "Channel List" ;
+    dc:description "Sensor channels to assess." ;
+    sensorwf:dataType xsd:string .
+
+sensorwf:M2_QualityAssessment_in_config
+    a provone:InPort ;
+    rdfs:label "Quality Config" ;
+    dc:description "Domain quality-assessment config (thresholds, expected dt, trend channels)." ;
+    sensorwf:dataType xsd:string .
+
+sensorwf:M2_QualityAssessment_out_quality_report
+    a provone:OutPort ;
+    rdfs:label "Quality Report" ;
+    dc:description "Per-channel quality metrics and summary flags." ;
+    sensorwf:dataType sensorwf:QualityReport .
+
+# ── Feature Engineering ──────────────────────────────────────────
+sensorwf:M3_FeatureEngineering
+    a provone:Program, prov:Activity ;
+    rdfs:label "Feature Engineering" ;
+    dc:description "Builds a multi-dimensional feature matrix from the clean time-series. Nine feature families per channel (when session >= 3x window): raw value, first-order difference, rolling mean, rolling std, rolling skewness, rolling excess kurtosis, zero-crossing rate, spectral entropy, and dominant frequency (Hz). A sample-interval timing feature (dt_sample) is always included." ;
+    sensorwf:implementedBy "scripts/evaluator.py" ;
+    provone:hasInPort sensorwf:M3_FeatureEngineering_in_clean_df,
+    provone:hasInPort sensorwf:M3_FeatureEngineering_in_channels,
+    provone:hasInPort sensorwf:M3_FeatureEngineering_in_window,
+    provone:hasOutPort sensorwf:M3_FeatureEngineering_out_feature_matrix,
+    provone:hasOutPort sensorwf:M3_FeatureEngineering_out_feature_names,
+    sensorwf:hasAssumption "Rolling statistics are only computed when session length >= 3 * window.",
+    sensorwf:hasAssumption "NaN values are forward-filled then backward-filled before feature extraction.",
+    sensorwf:hasAssumption "Window size should be tuned per domain (ECG: 100, Climate: 24, Satellite: 15 samples)."
+.
+
+sensorwf:M3_FeatureEngineering_in_clean_df
+    a provone:InPort ;
+    rdfs:label "Standardised Time-Series" ;
+    dc:description "Standardised time-series from M1." ;
+    sensorwf:dataType sensorwf:DataFrame .
+
+sensorwf:M3_FeatureEngineering_in_channels
+    a provone:InPort ;
+    rdfs:label "Channel List" ;
+    dc:description "Sensor channels to engineer features over." ;
+    sensorwf:dataType xsd:string .
+
+sensorwf:M3_FeatureEngineering_in_window
+    a provone:InPort ;
+    rdfs:label "Rolling Window Size" ;
+    dc:description "Rolling window size in samples." ;
+    sensorwf:dataType xsd:integer .
+
+sensorwf:M3_FeatureEngineering_out_feature_matrix
+    a provone:OutPort ;
+    rdfs:label "Feature Matrix" ;
+    dc:description "Numeric (n_samples, n_features) float64 array." ;
+    sensorwf:dataType sensorwf:NumpyArray .
+
+sensorwf:M3_FeatureEngineering_out_feature_names
+    a provone:OutPort ;
+    rdfs:label "Feature Name List" ;
+    dc:description "Ordered list of feature column names matching the feature matrix." ;
+    sensorwf:dataType xsd:string .
+
+# ── Semantic Annotation and Knowledge Graph Construction ──────────────────────────────────────────
+sensorwf:M4_SemanticAnnotation
+    a provone:Program, prov:Activity ;
+    rdfs:label "Semantic Annotation and Knowledge Graph Construction" ;
+    dc:description "Maps feature names and (optionally) ML detector evidence to domain OWL ontology classes to produce an ontology-linked knowledge graph (RDF/Turtle, GraphML). Enables SPARQL-queryable, subsystem-grounded explainability and cross-domain semantic comparison. In core mode, edges encode feature-class membership; in use-case mode, edges are additionally weighted by IsolationForest importances." ;
+    sensorwf:implementedBy "scripts/utils/semantic_if_kg.py" ;
+    provone:hasInPort sensorwf:M4_SemanticAnnotation_in_feature_names,
+    provone:hasInPort sensorwf:M4_SemanticAnnotation_in_ontology_owl,
+    provone:hasInPort sensorwf:M4_SemanticAnnotation_in_ml_results,
+    provone:hasOutPort sensorwf:M4_SemanticAnnotation_out_kg_turtle,
+    provone:hasOutPort sensorwf:M4_SemanticAnnotation_out_kg_nodes_csv,
+    provone:hasOutPort sensorwf:M4_SemanticAnnotation_out_kg_edges_csv,
+    sensorwf:hasAssumption "Feature names are matched to OWL class local names by prefix substring.",
+    sensorwf:hasAssumption "IsolationForest feature_importances_ are used as edge weights (extension mode only).",
+    sensorwf:hasAssumption "Ontology local names follow the domain-specific naming convention."
+.
+
+sensorwf:M4_SemanticAnnotation_in_feature_names
+    a provone:InPort ;
+    rdfs:label "Feature Name List" ;
+    dc:description "Feature names from M3." ;
+    sensorwf:dataType xsd:string .
+
+sensorwf:M4_SemanticAnnotation_in_ontology_owl
+    a provone:InPort ;
+    rdfs:label "Domain Ontology" ;
+    dc:description "Domain OWL ontology file." ;
+    sensorwf:dataType xsd:anyURI .
+
+sensorwf:M4_SemanticAnnotation_in_ml_results
+    a provone:InPort ;
+    rdfs:label "ML Evaluation Results (optional)" ;
+    dc:description "Optional E2 output; if provided, IF importances weight KG edges." ;
+    sensorwf:dataType xsd:anyURI .
+
+sensorwf:M4_SemanticAnnotation_out_kg_turtle
+    a provone:OutPort ;
+    rdfs:label "Knowledge Graph (Turtle)" ;
+    dc:description "RDF/Turtle serialisation of the semantic KG." ;
+    sensorwf:dataType xsd:anyURI .
+
+sensorwf:M4_SemanticAnnotation_out_kg_nodes_csv
+    a provone:OutPort ;
+    rdfs:label "Knowledge Graph Nodes CSV" ;
+    dc:description "Node table for GraphML/NetworkX analysis." ;
+    sensorwf:dataType xsd:anyURI .
+
+sensorwf:M4_SemanticAnnotation_out_kg_edges_csv
+    a provone:OutPort ;
+    rdfs:label "Knowledge Graph Edges CSV" ;
+    dc:description "Edge table with semantic relation types and importance weights." ;
+    sensorwf:dataType xsd:anyURI .
+
+# ── Provenance Export ──────────────────────────────────────────
+sensorwf:M5_ProvenanceExport
+    a provone:Program, prov:Activity ;
+    rdfs:label "Provenance Export" ;
+    dc:description "Records one prov:Activity per M1-M4 module execution with wall-clock timestamps, input row counts, output file paths, and parameter values. Serialises the complete PROV-O/ProvONE trace to RDF/Turtle." ;
+    sensorwf:implementedBy "scripts/provenance_recorder.py" ;
+    provone:hasInPort sensorwf:M5_ProvenanceExport_in_execution_log,
+    provone:hasOutPort sensorwf:M5_ProvenanceExport_out_provenance_ttl,
+    sensorwf:hasAssumption "Timestamps are UTC ISO 8601 strings.",
+    sensorwf:hasAssumption "SHA-256 checksums are computed automatically for all file-path entities and stored as telwf:sha256 in the provenance trace.",
+    sensorwf:hasAssumption "Agent information is limited to the host machine; no multi-user attribution is tracked."
+.
+
+sensorwf:M5_ProvenanceExport_in_execution_log
+    a provone:InPort ;
+    rdfs:label "Execution Log" ;
+    dc:description "In-memory list of module execution records collected during the pipeline run." ;
+    sensorwf:dataType sensorwf:ExecutionLog .
+
+sensorwf:M5_ProvenanceExport_out_provenance_ttl
+    a provone:OutPort ;
+    rdfs:label "Provenance Trace (Turtle)" ;
+    dc:description "PROV-O/ProvONE serialisation of the full run." ;
+    sensorwf:dataType xsd:anyURI .
+
+# ── Data-flow channels ──────────────────────────────────────────
+sensorwf:ch01
+    a provone:Channel ;
+    provone:connectsTo sensorwf:M2_QualityAssessment_in_clean_df ;
+    provone:connectsFrom sensorwf:M1_DataIngestion_out_clean_df .
+
+sensorwf:ch02
+    a provone:Channel ;
+    provone:connectsTo sensorwf:M2_QualityAssessment_in_channels ;
+    provone:connectsFrom sensorwf:M1_DataIngestion_out_adapter_meta .
+
+sensorwf:ch03
+    a provone:Channel ;
+    provone:connectsTo sensorwf:M3_FeatureEngineering_in_clean_df ;
+    provone:connectsFrom sensorwf:M2_QualityAssessment_out_quality_report .
+
+sensorwf:ch04
+    a provone:Channel ;
+    provone:connectsTo sensorwf:M4_SemanticAnnotation_in_feature_names ;
+    provone:connectsFrom sensorwf:M3_FeatureEngineering_out_feature_names .
+
+sensorwf:ch05
+    a provone:Channel ;
+    provone:connectsTo sensorwf:M4_SemanticAnnotation_in_ml_results ;
+    provone:connectsFrom sensorwf:M3_FeatureEngineering_out_feature_matrix .
+
+sensorwf:ch06
+    a provone:Channel ;
+    provone:connectsTo sensorwf:M5_ProvenanceExport_in_execution_log ;
+    provone:connectsFrom sensorwf:M4_SemanticAnnotation_out_kg_turtle .

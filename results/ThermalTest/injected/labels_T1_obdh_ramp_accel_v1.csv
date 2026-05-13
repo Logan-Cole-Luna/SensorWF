@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels
-T1_obdh_ramp_accel,11080,18497,high,['TEMP_OBDH']

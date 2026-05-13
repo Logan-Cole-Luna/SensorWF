@@ -1,0 +1,37 @@
+tag,tier,variant,description,anomaly_type,start_idx,end_idx,severity,affected_channels
+ecg_baseline_wander,easy,1,Sinusoidal baseline drift (respiration artifact),ecg_baseline_wander,10900,12699,low,"['MLII', 'V2']"
+ecg_baseline_wander,easy,2,Sinusoidal baseline drift (respiration artifact),ecg_baseline_wander,7041,8840,low,"['MLII', 'V2']"
+ecg_baseline_wander,medium,1,Sinusoidal baseline drift (respiration artifact),ecg_baseline_wander,5898,11597,medium,"['MLII', 'V2']"
+ecg_baseline_wander,medium,2,Sinusoidal baseline drift (respiration artifact),ecg_baseline_wander,6554,12253,medium,"['MLII', 'V2']"
+ecg_baseline_wander,hard,1,Sinusoidal baseline drift (respiration artifact),ecg_baseline_wander,3321,12620,high,"['MLII', 'V2']"
+ecg_baseline_wander,hard,2,Sinusoidal baseline drift (respiration artifact),ecg_baseline_wander,5190,14489,high,"['MLII', 'V2']"
+ecg_electrode_dropout,easy,1,Lead zero-clamp (electrode disconnection),ecg_electrode_dropout,10350,12149,low,['V2']
+ecg_electrode_dropout,easy,2,Lead zero-clamp (electrode disconnection),ecg_electrode_dropout,7592,9391,low,['V2']
+ecg_electrode_dropout,medium,1,Lead zero-clamp (electrode disconnection),ecg_electrode_dropout,2100,7799,medium,['V2']
+ecg_electrode_dropout,medium,2,Lead zero-clamp (electrode disconnection),ecg_electrode_dropout,8850,14549,medium,['MLII']
+ecg_electrode_dropout,hard,1,Lead zero-clamp (electrode disconnection),ecg_electrode_dropout,2665,11964,high,['MLII']
+ecg_electrode_dropout,hard,2,Lead zero-clamp (electrode disconnection),ecg_electrode_dropout,4135,13434,high,['V2']
+ecg_emg_burst,easy,1,High-frequency EMG noise burst (muscle artifact),ecg_emg_burst,5478,7277,low,"['MLII', 'V2']"
+ecg_emg_burst,easy,2,High-frequency EMG noise burst (muscle artifact),ecg_emg_burst,9213,11012,low,"['MLII', 'V2']"
+ecg_emg_burst,medium,1,High-frequency EMG noise burst (muscle artifact),ecg_emg_burst,5099,10798,medium,"['MLII', 'V2']"
+ecg_emg_burst,medium,2,High-frequency EMG noise burst (muscle artifact),ecg_emg_burst,1964,7663,medium,"['MLII', 'V2']"
+ecg_emg_burst,hard,1,High-frequency EMG noise burst (muscle artifact),ecg_emg_burst,5224,14523,high,"['MLII', 'V2']"
+ecg_emg_burst,hard,2,High-frequency EMG noise burst (muscle artifact),ecg_emg_burst,4982,14281,high,"['MLII', 'V2']"
+ecg_powerline_noise,easy,1,60 Hz sinusoidal interference (power line),ecg_powerline_noise,4585,6384,low,"['MLII', 'V2']"
+ecg_powerline_noise,easy,2,60 Hz sinusoidal interference (power line),ecg_powerline_noise,4120,5919,low,"['MLII', 'V2']"
+ecg_powerline_noise,medium,1,60 Hz sinusoidal interference (power line),ecg_powerline_noise,3281,8980,medium,"['MLII', 'V2']"
+ecg_powerline_noise,medium,2,60 Hz sinusoidal interference (power line),ecg_powerline_noise,4051,9750,medium,"['MLII', 'V2']"
+ecg_powerline_noise,hard,1,60 Hz sinusoidal interference (power line),ecg_powerline_noise,5364,14663,high,"['MLII', 'V2']"
+ecg_powerline_noise,hard,2,60 Hz sinusoidal interference (power line),ecg_powerline_noise,3240,12539,high,"['MLII', 'V2']"
+ecg_amplitude_scale,easy,1,Multiplicative amplitude scaling (amplifier error),ecg_amplitude_scale,12080,13879,low,['V2']
+ecg_amplitude_scale,easy,2,Multiplicative amplitude scaling (amplifier error),ecg_amplitude_scale,6595,8394,low,['MLII']
+ecg_amplitude_scale,medium,1,Multiplicative amplitude scaling (amplifier error),ecg_amplitude_scale,4120,9819,medium,['MLII']
+ecg_amplitude_scale,medium,2,Multiplicative amplitude scaling (amplifier error),ecg_amplitude_scale,8951,14650,medium,['V2']
+ecg_amplitude_scale,hard,1,Multiplicative amplitude scaling (amplifier error),ecg_amplitude_scale,4597,13896,high,['V2']
+ecg_amplitude_scale,hard,2,Multiplicative amplitude scaling (amplifier error),ecg_amplitude_scale,2030,11329,high,['V2']
+ecg_lead_inversion,easy,1,Sign inversion of one lead (lead reversal),ecg_lead_inversion,13159,14958,low,['V2']
+ecg_lead_inversion,easy,2,Sign inversion of one lead (lead reversal),ecg_lead_inversion,10512,12311,low,['V2']
+ecg_lead_inversion,medium,1,Sign inversion of one lead (lead reversal),ecg_lead_inversion,3389,9088,medium,['MLII']
+ecg_lead_inversion,medium,2,Sign inversion of one lead (lead reversal),ecg_lead_inversion,2887,8586,medium,['V2']
+ecg_lead_inversion,hard,1,Sign inversion of one lead (lead reversal),ecg_lead_inversion,4746,14045,high,['V2']
+ecg_lead_inversion,hard,2,Sign inversion of one lead (lead reversal),ecg_lead_inversion,3254,12553,high,['V2']

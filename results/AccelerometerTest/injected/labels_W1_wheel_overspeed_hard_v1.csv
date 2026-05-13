@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-W1_wheel_overspeed,946,1740,high,['WHEEL_SPEED'],hard

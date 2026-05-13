@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels
-C3_frame_error_burst,902,1062,high,['FRAME_ERR']

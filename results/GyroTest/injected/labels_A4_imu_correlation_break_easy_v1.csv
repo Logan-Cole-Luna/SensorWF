@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A4_imu_correlation_break,1181,1263,low,"[np.str_('GYRO_Y'), np.str_('ACCEL_Z'), np.str_('GYRO_X'), np.str_('ACCEL_X')]",easy

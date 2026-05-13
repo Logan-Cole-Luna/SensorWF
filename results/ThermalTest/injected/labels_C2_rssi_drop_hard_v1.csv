@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-C2_rssi_drop,10874,15313,high,['RSSI'],hard

@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A1_accel_dropout,470,577,medium,"['ACCEL_X', 'ACCEL_Y', 'ACCEL_Z']",easy

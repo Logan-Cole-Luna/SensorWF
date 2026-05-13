@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-C3_frame_error_avalanche,921,1130,medium,['FRAME_ERR'],medium

@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A4_imu_correlation_break,526,780,medium,"[np.str_('GYRO_Z'), np.str_('GYRO_X'), np.str_('MAG_Z')]",medium

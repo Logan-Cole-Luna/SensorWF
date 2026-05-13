@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-W1_wheel_runaway,7623,9518,low,['WHEEL_SPEED'],easy

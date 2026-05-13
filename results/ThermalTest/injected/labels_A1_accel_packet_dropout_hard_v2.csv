@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-A1_accel_packet_dropout,8257,12866,high,"['ACCEL_X', 'ACCEL_Y', 'ACCEL_Z']",hard

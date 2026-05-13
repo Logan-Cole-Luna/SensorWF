@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-P3_rail_stuck_high,657,1737,high,['ADCS_5V_V'],medium

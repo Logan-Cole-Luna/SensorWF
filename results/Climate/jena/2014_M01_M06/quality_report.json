@@ -1,0 +1,56 @@
+{
+  "nan_rates": {
+    "p_mbar": 0.0,
+    "T_degC": 0.0,
+    "Tpot_K": 0.0,
+    "Tdew_degC": 0.0,
+    "rh_pct": 0.0,
+    "VPmax_mbar": 0.0,
+    "VPact_mbar": 0.0,
+    "VPdef_mbar": 0.0,
+    "sh_gkg": 0.0,
+    "H2OC_mmolmol": 0.0,
+    "rho_gm3": 0.0,
+    "wv_ms": 0.0,
+    "max_wv_ms": 0.0,
+    "wd_deg": 0.0
+  },
+  "stuck_channels": [],
+  "timing": {
+    "mean_dt_s": 600.0,
+    "std_dt_s": 0.0,
+    "max_gap_s": 600.0,
+    "expected_dt_s": 600.0,
+    "n_large_gaps": 0
+  },
+  "zscore_flags": {
+    "T_degC": 18,
+    "Tpot_K": 18,
+    "VPmax_mbar": 290,
+    "VPact_mbar": 231,
+    "VPdef_mbar": 282,
+    "sh_gkg": 247,
+    "H2OC_mmolmol": 239,
+    "wv_ms": 175,
+    "max_wv_ms": 166
+  },
+  "trends": {
+    "T_degC": {
+      "slope_per_min": 6.4e-05,
+      "r_squared": 0.497158,
+      "delta": 11.38
+    },
+    "p_mbar": {
+      "slope_per_min": 3.2e-05,
+      "r_squared": 0.107578,
+      "delta": 3.39
+    }
+  },
+  "summary": {
+    "n_rows": 26247,
+    "n_channels": 14,
+    "n_good_channels": 14,
+    "n_stuck": 0,
+    "n_zscore_flagged": 9
+  }
+}

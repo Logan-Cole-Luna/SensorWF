@@ -1,0 +1,10 @@
+source,target,relation,weight
+MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+d_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+rm_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+rs_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+sk_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+ku_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+zcr_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+se_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001
+df_MLII,https://sensorwf.org/ontologies/ecg#MLII,evidenceForClass,0.001

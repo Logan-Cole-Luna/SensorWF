@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-P2_switching_noise_burst,8826,9380,low,['OBC_PWR_V'],easy

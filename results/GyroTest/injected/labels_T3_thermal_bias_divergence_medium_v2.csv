@@ -1,2 +1,0 @@
-anomaly_type,start_idx,end_idx,severity,affected_channels,tier
-T3_thermal_bias_divergence,181,640,medium,"['TEMP_EPS', 'TEMP_BATTERY']",medium
