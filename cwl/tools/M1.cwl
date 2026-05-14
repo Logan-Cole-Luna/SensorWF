@@ -9,7 +9,7 @@ label: "Data Ingestion"
 doc: >
   Domain-adaptive ingestion that normalises raw sensor archives into a standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface.
 
-baseCommand: [python, "DataIngestion"]
+baseCommand: [python, "use_case.py"]
 
 requirements:
   NetworkAccess:

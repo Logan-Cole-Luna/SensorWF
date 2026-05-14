@@ -176,14 +176,19 @@ def _check_feature_config(cfg: Any) -> list[str]:
     return errors
 
 
-def _check_fault_types(fault_types: Any) -> list[str]:
-    errors: list[str] = []
+def _check_fault_types(fault_types: Any) -> tuple[list[str], list[str]]:
+    errors:   list[str] = []
+    warnings: list[str] = []
     if not isinstance(fault_types, list):
         errors.append(f"get_fault_types() must return list, got {type(fault_types).__name__}")
-        return errors
+        return errors, warnings
     if not fault_types:
-        errors.append("get_fault_types() returned an empty list")
-        return errors
+        # Empty is valid for core-only adapters that do not use E1/E2.
+        warnings.append(
+            "get_fault_types() returned [] — fault injection (E1) will be unavailable "
+            "for this domain. Implement get_fault_types() to enable the anomaly detection use case."
+        )
+        return errors, warnings
     for i, ft in enumerate(fault_types):
         if not isinstance(ft, dict):
             errors.append(f"fault_types[{i}] must be a dict, got {type(ft).__name__}")
@@ -192,7 +197,7 @@ def _check_fault_types(fault_types: Any) -> list[str]:
             errors.append(f"fault_types[{i}] missing required key 'tag'")
         if "description" not in ft and "name" not in ft:
             errors.append(f"fault_types[{i}] missing 'description' (or 'name') key")
-    return errors
+    return errors, warnings
 
 
 def validate_adapter(
@@ -252,11 +257,12 @@ def validate_adapter(
         errors.append(f"get_feature_config() raised: {exc}")
         checks["feature_config"] = "fail"
 
-    # 5. Fault types
+    # 5. Fault types (optional for core-only adapters)
     try:
         ft = adapter.get_fault_types()
-        ft_errors = _check_fault_types(ft)
+        ft_errors, ft_warnings = _check_fault_types(ft)
         errors.extend(ft_errors)
+        warnings.extend(ft_warnings)
         checks["fault_types"] = "fail" if ft_errors else "pass"
     except Exception as exc:
         errors.append(f"get_fault_types() raised: {exc}")

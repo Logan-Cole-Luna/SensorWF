@@ -24,6 +24,49 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 # ---------------------------------------------------------------------------
+# Component registry loader
+# ---------------------------------------------------------------------------
+
+def _load_registry() -> dict:
+    """Load components.json from the repo root (one level above scripts/)."""
+    registry_path = os.path.join(os.path.dirname(__file__), "..", "components.json")
+    try:
+        with open(os.path.abspath(registry_path), encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def component_config_defaults(module_id: str) -> dict[str, Any]:
+    """
+    Return {param_name: default_value} for *module_id* from components.json.
+
+    Used to keep pipeline defaults in sync with the machine-readable registry.
+    Falls back to an empty dict if the registry file is absent or malformed.
+    """
+    for mod in _load_registry().get("modules", []):
+        if mod.get("id") == module_id:
+            return {
+                p["name"]: p["default"]
+                for p in mod.get("config_params", [])
+                if "default" in p
+            }
+    return {}
+
+
+# Compile registry defaults once at import time so every import pays one disk read.
+_M2_REGISTRY_DEFAULTS: dict[str, Any] = component_config_defaults("M2")
+
+
+# Compiled Cython inner loops (build with: python setup_cy.py build_ext --inplace)
+try:
+    from scripts._core_cy import rolling_skew_kurt as _cy_rolling_skew_kurt
+    _HAS_CY = True
+except ImportError:
+    _HAS_CY = False
+
+
+# ---------------------------------------------------------------------------
 # Shared spectral / statistical feature helpers  (used by M3 and evaluator)
 # ---------------------------------------------------------------------------
 
@@ -45,7 +88,10 @@ def _rolling_spectral_features(
     sample_hz: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Vectorised rolling spectral entropy and dominant frequency.
+    Batched rolling spectral entropy and dominant frequency across all channels.
+
+    Uses a single 3-D stride-tricks view + one np.fft.rfft call for all channels
+    instead of a Python loop, giving ~nc× speedup over the per-channel version.
 
     Parameters
     ----------
@@ -55,46 +101,59 @@ def _rolling_spectral_features(
 
     Returns
     -------
-    spec_entropy : (n_samples, n_channels) – Shannon entropy of power spectrum
-    dom_freq     : (n_samples, n_channels) – peak frequency excluding DC (Hz)
+    spec_entropy : (n_samples, n_channels)
+    dom_freq     : (n_samples, n_channels)
     """
     n, nc = x2d.shape
     spec_ent = np.zeros((n, nc), dtype=float)
-    dom_freq = np.zeros((n, nc), dtype=float)
+    dom_freq  = np.zeros((n, nc), dtype=float)
     if n < window or window < 4:
         return spec_ent, dom_freq
 
     freqs = np.fft.rfftfreq(window, d=1.0 / max(sample_hz, 1e-6))
 
-    for ci in range(nc):
-        x = x2d[:, ci].astype(float)
-        mu = x.mean()
-        x_c = x - mu
+    # Centre each channel, pad all at once → (n + window - 1, nc)
+    x2d_c = x2d.astype(float) - x2d.mean(axis=0, keepdims=True)
+    x_pad  = np.pad(x2d_c, ((window - 1, 0), (0, 0)), mode="edge")
 
-        # Build sliding-window matrix (n, window) via stride tricks
-        x_pad = np.pad(x_c, (window - 1, 0), mode="edge")
-        stride = x_pad.strides[0]
-        try:
-            wins = np.lib.stride_tricks.as_strided(
-                x_pad,
-                shape=(n, window),
-                strides=(stride, stride),
-                writeable=False,
-            ).copy()
-        except Exception:
-            continue
+    # Build sliding-window view: wins[i, ci, w] = x_pad[i+w, ci]
+    # Strides: (s_row, s_col, s_row)  where x_pad is C-contiguous
+    try:
+        s_row, s_col = x_pad.strides
+        wins = np.lib.stride_tricks.as_strided(
+            x_pad,
+            shape   = (n, nc, window),
+            strides = (s_row, s_col, s_row),
+            writeable = False,
+        ).copy()                                    # (n, nc, window)
+    except Exception:
+        # Fallback: per-channel loop (original behaviour)
+        for ci in range(nc):
+            x_c = x2d_c[:, ci]
+            xp  = np.pad(x_c, (window - 1, 0), mode="edge")
+            st  = xp.strides[0]
+            try:
+                w = np.lib.stride_tricks.as_strided(
+                    xp, shape=(n, window), strides=(st, st), writeable=False).copy()
+            except Exception:
+                continue
+            fm = np.abs(np.fft.rfft(w, axis=1))
+            if fm.shape[1] > 1:
+                dom_freq[:, ci] = freqs[np.argmax(fm[:, 1:], axis=1) + 1]
+            psd = fm ** 2
+            p   = np.clip(psd / (psd.sum(axis=1, keepdims=True) + 1e-10), 1e-10, None)
+            spec_ent[:, ci] = -np.sum(p * np.log2(p), axis=1)
+        return spec_ent, dom_freq
 
-        fft_mag = np.abs(np.fft.rfft(wins, axis=1))          # (n, nf)
+    # Single batched rfft: (n, nc, window) → (n, nc, nf)
+    fft_mag = np.abs(np.fft.rfft(wins, axis=2))
 
-        # Dominant frequency (skip DC component at index 0)
-        if fft_mag.shape[1] > 1:
-            dom_freq[:, ci] = freqs[np.argmax(fft_mag[:, 1:], axis=1) + 1]
+    if fft_mag.shape[2] > 1:
+        dom_freq = freqs[np.argmax(fft_mag[:, :, 1:], axis=2) + 1]
 
-        # Spectral entropy: H = -sum(p * log2(p)) over normalised power spectrum
-        psd = fft_mag ** 2
-        psd_sum = psd.sum(axis=1, keepdims=True) + 1e-10
-        p = np.clip(psd / psd_sum, 1e-10, None)
-        spec_ent[:, ci] = -np.sum(p * np.log2(p), axis=1)
+    psd = fft_mag ** 2
+    p   = np.clip(psd / (psd.sum(axis=2, keepdims=True) + 1e-10), 1e-10, None)
+    spec_ent = -np.sum(p * np.log2(p), axis=2)
 
     return spec_ent, dom_freq
 
@@ -107,15 +166,16 @@ def _rolling_zcr(x2d: np.ndarray, window: int) -> np.ndarray:
     Returns (n_samples, n_channels) float64.
     """
     n, nc = x2d.shape
-    result = np.zeros((n, nc), dtype=float)
-    for ci in range(nc):
-        x = x2d[:, ci]
-        centered = x - x.mean()
-        sign = np.sign(centered)
-        crossings = (np.diff(sign, prepend=sign[0]) != 0).astype(float)
-        result[:, ci] = (
-            pd.Series(crossings).rolling(window, min_periods=1).mean().to_numpy()
-        )
+    centered  = x2d - x2d.mean(axis=0, keepdims=True)
+    crossings = (np.diff(np.sign(centered), axis=0, prepend=np.sign(centered[[0]])) != 0).astype(float)
+
+    # Rolling mean via prefix-sum trick (avoids per-channel pandas overhead)
+    cs = np.cumsum(crossings, axis=0)           # (n, nc)
+    result = np.empty_like(cs)
+    idx = np.arange(1, n + 1, dtype=float).reshape(-1, 1)
+    result[:window] = cs[:window] / np.minimum(idx[:window], window)
+    if n > window:
+        result[window:] = (cs[window:] - cs[:n - window]) / window
     return result
 
 
@@ -138,12 +198,16 @@ def compute_extended_features(
     Only called when len(df) >= window * 3.
     """
     raw = raw_df[cols].copy().astype(float).ffill().bfill().fillna(0.0)
-    x2d = raw.to_numpy()
+    x2d = np.require(raw.to_numpy(), dtype=np.float64, requirements=["C_CONTIGUOUS", "WRITEABLE"])
     mp3 = max(3, window // 3)
     mp4 = max(4, window // 4)
 
-    skew = raw.rolling(window, min_periods=mp3).skew().fillna(0.0).to_numpy()
-    kurt = raw.rolling(window, min_periods=mp4).kurt().fillna(0.0).to_numpy()
+    if _HAS_CY:
+        skew, kurt = _cy_rolling_skew_kurt(x2d, window, mp3, mp4)
+    else:
+        skew = raw.rolling(window, min_periods=mp3).skew().fillna(0.0).to_numpy()
+        kurt = raw.rolling(window, min_periods=mp4).kurt().fillna(0.0).to_numpy()
+
     zcr  = _rolling_zcr(x2d, window)
     spec_ent, dom_freq = _rolling_spectral_features(x2d, window, sample_hz)
 
@@ -161,12 +225,18 @@ def compute_extended_features(
 # M2 -- Domain-agnostic quality assessment
 # ---------------------------------------------------------------------------
 
+# Hardcoded values are the fallback when components.json is absent.
+# _M2_REGISTRY_DEFAULTS (populated at import time) overrides them when present,
+# making components.json the authoritative source for M2 defaults.
 _DEFAULT_QUALITY_CFG: dict[str, Any] = {
-    "stuck_unique_max":   3,       # channels with <= this many unique values are stuck
-    "zscore_threshold":   3.0,     # sigma threshold for per-channel z-score flagging
-    "expected_dt_s":      None,    # expected sample interval (None = auto-estimate)
-    "gap_multiplier":     5.0,     # gap > expected_dt * this is flagged
-    "trend_channels":     [],      # channel names to run linear trend detection on
+    **{
+        "stuck_unique_max": 3,
+        "zscore_threshold": 3.0,
+        "expected_dt_s":    None,
+        "gap_multiplier":   5.0,
+        "trend_channels":   [],
+    },
+    **_M2_REGISTRY_DEFAULTS,
 }
 
 
@@ -367,16 +437,20 @@ def save_quality_report(report: dict, path: str) -> None:
 
 
 def write_owl_if_missing(path: str, content: str) -> str:
-    """Write OWL/RDF content to path if the file does not yet exist.
+    """Write OWL/RDF content to path, regenerating if the content has changed.
 
-    Called by DomainAdapter.ensure_ontology() so every domain generates
-    its ontology at runtime on first run — no manually managed static files.
-    Returns the (possibly newly created) file path.
+    Called by DomainAdapter.ensure_ontology(). Compares the new content against
+    the existing file so that changes to an adapter's get_class_map() or
+    get_fault_types() are automatically reflected on the next run.
+    Returns the (possibly newly created or updated) file path.
     """
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-    if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(content)
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            if fh.read() == content:
+                return path  # identical — skip write
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(content)
     return path
 
 

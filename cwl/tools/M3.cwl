@@ -9,7 +9,7 @@ label: "Feature Engineering"
 doc: >
   Builds a multi-dimensional feature matrix from the clean time-series. Nine feature families per channel (when session >= 3x window): (1) raw value, (2) first-order difference, (3) rolling mean, (4) rolling std, (5) rolling skewness, (6) rolling excess kurtosis, (7) zero-crossing rate, (8) spectral entropy, (9) dominant frequency (Hz). Plus a sample-interval timing feature (dt_sample).
 
-baseCommand: [python, "FeatureEngineering"]
+baseCommand: [python, "scripts/pipeline_core.py"]
 
 requirements:
   NetworkAccess:

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_sensor_drift,19046,22190,low,['T_degC']

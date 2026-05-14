@@ -295,7 +295,7 @@ def export_cwl(
     # Per-module tool CWL files
     for mod in modules:
         mod_id      = mod["id"]
-        script_path = mod.get("script_path") or mod.get("provone_uri", "").replace("sensorwf:", "")
+        script_path = mod.get("script_path")   # None → _make_tool_cwl falls back to module-ID pattern
         tool_cwl    = _make_tool_cwl(mod, script_path)
         out_path    = os.path.join(tools_dir, f"{mod_id}.cwl")
         with open(out_path, "w", encoding="utf-8") as fh:

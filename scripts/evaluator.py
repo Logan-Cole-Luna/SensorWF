@@ -315,12 +315,15 @@ class RobustRollingZScoreDetector:
         persist = pd.Series(instant).rolling(self.persistence, min_periods=1).mean().to_numpy(dtype=float)
 
         # One-sided CUSUM over centered instantaneous score catches subtle persistent shifts.
+        # Vectorized: s[i] = max(0, s[i-1] + x[i] - k)
+        #   ≡  C[i+1] - min(C[0..i])  where C is the prefix-sum of (x-k), C[0]=0.
         centered = instant - np.median(instant)
-        s_pos = np.zeros_like(centered)
-        s_neg = np.zeros_like(centered)
-        for i in range(1, len(centered)):
-            s_pos[i] = max(0.0, s_pos[i - 1] + centered[i] - self.cusum_k)
-            s_neg[i] = max(0.0, s_neg[i - 1] - centered[i] - self.cusum_k)
+        C_pos = np.zeros(len(centered) + 1, dtype=float)
+        C_neg = np.zeros(len(centered) + 1, dtype=float)
+        C_pos[1:] = np.cumsum( centered - self.cusum_k)
+        C_neg[1:] = np.cumsum(-centered - self.cusum_k)
+        s_pos = np.maximum(0.0, C_pos[1:] - np.minimum.accumulate(C_pos)[:-1])
+        s_neg = np.maximum(0.0, C_neg[1:] - np.minimum.accumulate(C_neg)[:-1])
         cus = np.maximum(s_pos, s_neg) / max(self.cusum_h, 1e-6)
         base = np.maximum(instant, persist)
         # Keep CUSUM as a gentle persistence booster, not a replacement score.
@@ -337,9 +340,9 @@ class IsolationForestDetector:
     a proxy for which features the forest relies on most for isolation.
     """
 
-    def __init__(self, n_estimators: int = 300, contamination: float = 0.02,
+    def __init__(self, n_estimators: int = 150, contamination: float = 0.02,
                  random_state: int = 42, max_features: int = 32, pca_variance: float = 0.97,
-                 use_pca: bool = True, use_rotation: bool = True, n_ensemble: int = 3):
+                 use_pca: bool = True, use_rotation: bool = True, n_ensemble: int = 2):
         self._scaler = StandardScaler()
         self._max_features = max(8, int(max_features))
         self._pca_variance = float(pca_variance)
@@ -446,7 +449,7 @@ class AutoencoderDetector:
     (drift, bursts, sustained faults) rather than only point anomalies.
     """
 
-    def __init__(self, max_iter: int = 700, random_state: int = 42, seq_len: int = 8,
+    def __init__(self, max_iter: int = 300, random_state: int = 42, seq_len: int = 8,
                  denoise_sigma: float = 0.05):
         self._scaler       = StandardScaler()
         self._max_iter     = max_iter
@@ -471,28 +474,35 @@ class AutoencoderDetector:
             random_state=self._random_state,
             early_stopping=True,
             validation_fraction=0.15,
-            n_iter_no_change=25,
+            n_iter_no_change=15,
             tol=1e-5,
         )
 
     def _windowed(self, Xs: np.ndarray) -> tuple[np.ndarray, bool]:
         """Return sequence-window vectors if long enough; else raw sample vectors."""
-        n = len(Xs)
-        if n < self._seq_len:
+        n, p = Xs.shape
+        sl   = self._seq_len
+        if n < sl:
             return Xs, False
-        wins = [Xs[i:i + self._seq_len].reshape(-1) for i in range(n - self._seq_len + 1)]
-        return np.vstack(wins), True
+        # Stride-tricks: view[i, w, k] = Xs[i+w, k]  →  shape (n-sl+1, sl, p)
+        s0, s1 = Xs.strides
+        view = np.lib.stride_tricks.as_strided(
+            Xs, shape=(n - sl + 1, sl, p), strides=(s0, s0, s1), writeable=False,
+        ).copy()
+        return view.reshape(n - sl + 1, sl * p), True
 
     def _sample_scores_from_windows(self, win_scores: np.ndarray, n_samples: int) -> np.ndarray:
-        """Project window-level errors back to sample-level by overlap averaging."""
-        scores = np.zeros(n_samples, dtype=float)
-        counts = np.zeros(n_samples, dtype=float)
-        for i, s in enumerate(win_scores):
-            j = i + self._seq_len
-            scores[i:j] += s
-            counts[i:j] += 1.0
-        counts[counts == 0] = 1.0
-        return scores / counts
+        """Project window-level errors back to sample-level by overlap averaging (vectorized)."""
+        sl     = self._seq_len
+        n_wins = len(win_scores)
+        # scores[j] = sum(win_scores[max(0,j-sl+1) : min(n_wins, j+1)])
+        cs = np.empty(n_wins + 1, dtype=float)
+        cs[0] = 0.0
+        np.cumsum(win_scores, out=cs[1:])
+        j  = np.arange(n_samples)
+        hi = np.minimum(j + 1, n_wins)
+        lo = np.maximum(j - sl + 1, 0)
+        return (cs[hi] - cs[lo]) / np.maximum((hi - lo).astype(float), 1.0)
 
     def fit(self, X: np.ndarray, feature_names: list[str] | None = None) -> "AutoencoderDetector":
         Xs = self._scaler.fit_transform(X)
@@ -1347,7 +1357,15 @@ def run_generic_ml_evaluation(
                 "seq_len": _ae_seq_len(family, tag),
                 "denoise_sigma": 0.06,
             }
-            cache_key = (det_name, family, tag, n_feats, round(thr_pct, 3))
+            # Key on detector config, NOT on tag — many tags share identical
+            # contamination / seq_len / thr_pct, so caching per-tag re-fits
+            # the Autoencoder 6× when 1 fit suffices.
+            cache_key = (
+                det_name, family, n_feats,
+                round(thr_pct, 3),
+                round(det_cfg["contamination"], 4),
+                det_cfg["seq_len"],
+            )
             try:
                 if cache_key in fit_cache:
                     detector, train_scores, thr_val = fit_cache[cache_key]

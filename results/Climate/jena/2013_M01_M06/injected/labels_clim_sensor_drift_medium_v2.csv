@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_sensor_drift,11388,21291,medium,['rh_pct']

@@ -16,6 +16,7 @@
       "label": "Data Ingestion",
       "version": "1.0",
       "extension": false,
+      "script_path": "use_case.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",
@@ -85,6 +86,7 @@
       "label": "Quality Assessment",
       "version": "1.0",
       "extension": false,
+      "script_path": "scripts/pipeline_core.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",
@@ -160,6 +162,7 @@
       "label": "Feature Engineering",
       "version": "1.0",
       "extension": false,
+      "script_path": "scripts/pipeline_core.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",
@@ -222,6 +225,7 @@
       "label": "Semantic Annotation",
       "version": "1.0",
       "extension": false,
+      "script_path": "scripts/pipeline_core.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",
@@ -299,6 +303,7 @@
       "label": "Provenance Export",
       "version": "1.0",
       "extension": false,
+      "script_path": "scripts/provenance_recorder.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",
@@ -346,6 +351,7 @@
       "label": "Fault Injection",
       "version": "1.0",
       "extension": true,
+      "script_path": "scripts/utils/injector.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",
@@ -431,6 +437,7 @@
       "label": "Anomaly Detection",
       "version": "1.0",
       "extension": true,
+      "script_path": "scripts/evaluator.py",
       "domain_tags": [
         "satellite_telemetry",
         "biomedical_ecg",

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_dropout_zero,7208,10357,low,['rh_pct']

@@ -9,7 +9,7 @@ label: "Fault Injection"
 doc: >
   Injects synthetic faults into clean sessions to produce labelled evaluation variants. Fault morphologies are drawn from domain-specific taxonomies. A three-tier difficulty system scales amplitude, duration, and channel spread simultaneously to avoid single-axis separability (Wu & Keogh 2022). Part of the anomaly detection use case only; not part of the reusable core.
 
-baseCommand: [python, "FaultInjection"]
+baseCommand: [python, "scripts/utils/injector.py"]
 
 requirements:
   NetworkAccess:

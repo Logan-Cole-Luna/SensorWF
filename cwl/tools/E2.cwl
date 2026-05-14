@@ -9,7 +9,7 @@ label: "Anomaly Detection"
 doc: >
   Trains five ML detectors on the first 60% clean prefix; evaluates on injected suffix. Detectors: ZScore (MAD-robust), RobustRollingZScore (CUSUM), IsolationForest (rotation ensemble), Autoencoder (multi-scale MLP), LOF (density-based novelty). Threshold strategy: EVT/POT GPD calibration for density detectors; 99th-pct for statistical detectors. Part of the anomaly detection use case only; not part of the reusable core.
 
-baseCommand: [python, "AnomalyDetection"]
+baseCommand: [python, "scripts/evaluator.py"]
 
 requirements:
   NetworkAccess:

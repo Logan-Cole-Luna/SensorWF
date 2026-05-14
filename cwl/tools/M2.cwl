@@ -9,7 +9,7 @@ label: "Quality Assessment"
 doc: >
   Domain-agnostic sensor quality audit: NaN rates, stuck-channel detection, timing regularity, per-channel z-score flagging, and linear trend detection on selected channels. Outputs a machine-readable JSON quality report.
 
-baseCommand: [python, "QualityAssessment"]
+baseCommand: [python, "scripts/pipeline_core.py"]
 
 requirements:
   NetworkAccess:

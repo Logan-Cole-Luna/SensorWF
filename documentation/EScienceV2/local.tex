@@ -1,0 +1,104 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{microtype}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,matrix}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  frame=single,
+  frameround=tttt,
+  belowskip=0pt,
+  aboveskip=4pt
+}
+
+\begin{document}
+
+\title{SensorWF: A FAIR Generalizable Workflow Framework\\for Multi-Domain Scientific Time-Series Analysis}
+
+\author{
+  \IEEEauthorblockN{Author Name\textsuperscript{1},
+                    Author Name\textsuperscript{2}}
+  \IEEEauthorblockA{\textsuperscript{1}\textit{Department, Institution, City, Country}\\
+                    \textsuperscript{2}\textit{Department, Institution, City, Country}\\
+                    email@example.com}
+}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\begin{IEEEkeywords}
+computational workflows, FAIR principles, domain adaptation, sensor analytics,
+anomaly detection, PROV-O, ProvONE, knowledge graph, reproducibility
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+\textit{Submissions may include all aspects of eScience and its associated technologies, applications, algorithms, and tools, with a strong focus on practical solutions and open challenges. Ideal papers involve the interplay between applications and infrastructure technologies, with an emphasis on novelty in one or both.}
+
+\subsection{Contributions}
+Our contributions include:
+A generalizable module workflow
+A machine-readable component registry
+Runtime provenance and semantic annotation
+Cross-domain evaluation
+
+\section{Background and Related Work}
+\label{sec:background}
+
+\subsection{FAIR Computational Workflows}
+
+The FAIR principles, being Findable, Accessible, Interoperable, and Reusable, were initially developed by Wilkinson et al. for scientific data, and have since been extended to computational workflows \cite{wilkinson2016fair}. To enable meaningful reuse in line with these principles, workflows must provide typed module specifications, machine-readable provenance, and explicit scientific assumptions \cite{garijo2022fair}. 
+
+PROV-O provenance has been applied in epidemiological pipelines \cite{mitchell2022fair}.
+
+The PROV Ontology (PROV-O) expresses the PROV Data Model [PROV-DM] using the OWL2 Web Ontology Language (OWL2) [OWL2-OVERVIEW]. It provides a set of classes, properties, and restrictions that can be used to represent and interchange provenance information generated in different systems and under different contexts. It can also be specialized to create new classes and properties to model provenance information for different applications and domains. The PROV Document Overview describes the overall state of PROV, and should be read before other PROV documents.
+
+
+
+WorkflowHub supports workflow registration through RO-Crate packaging \cite{wilkinson2025workflowhub}, and the openEO Earth Observation platform incorporates provenance directly into its processing model \cite{rossi2025openeo}. 
+
+
+
+ A registry for describing, sharing and publishing scientific computational workflows
+
+WorkflowHub aims to facilitate discovery and re-use of workflows in an accessible and interoperable way. This is achieved through extensive use of open standards and tools, including CWL, RO-Crate, Bioschemas and GA4GH's TRS API, in accordance with the FAIR principles.
+
+WorkflowHub supports workflows of any type in its native repository. 
+
+
+
+
+
+SensorWF addresses the challenge of multi-domain generalizability by implementing a structured adapter pattern and a machine-readable component registry that supports any sensor domain without requiring changes to the core system.
+
+
+\subsection{Anomaly Detection Benchmarks and Methods}
+
+\subsection{KISPE SATLL}
+
+\subsubsection{Experiments}
+
+\subsection{Ontologies}
+
+\section{Methodology}
+
+\section{Results}
+
+\section{Limitations and Future Work}
+
+\section{Conclusion}
+
+\end{document}

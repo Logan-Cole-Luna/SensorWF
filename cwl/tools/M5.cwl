@@ -9,7 +9,7 @@ label: "Provenance Export"
 doc: >
   Records one prov:Activity per M1-M4 module execution with wall-clock timestamps, input row counts, output file paths, and parameter values. Serialises the complete PROV-O/ProvONE trace to RDF/Turtle.
 
-baseCommand: [python, "ProvenanceExport"]
+baseCommand: [python, "scripts/provenance_recorder.py"]
 
 requirements:
   NetworkAccess:

@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_stuck_sensor,15379,25282,medium,['T_degC']

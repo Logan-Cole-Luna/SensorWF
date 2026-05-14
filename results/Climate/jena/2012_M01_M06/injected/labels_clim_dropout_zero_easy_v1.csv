@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_dropout_zero,8012,11156,low,['T_degC']

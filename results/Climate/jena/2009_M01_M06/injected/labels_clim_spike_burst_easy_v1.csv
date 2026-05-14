@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_spike_burst,9517,12644,low,['rho_gm3']

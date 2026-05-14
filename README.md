@@ -41,44 +41,26 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Run the core pipeline (all three domains)
+### Run everything (recommended)
+
+`use_case.py` is the single entry point. It runs all four phases in order:
 
 ```bash
-python use_case.py               # runs satellite + ECG + climate cores
+python use_case.py                    # all domains — core + CWL + reports + anomaly
+python use_case.py --domain satellite # satellite only, all phases
+python use_case.py --domain ecg       # ECG only, all phases
+python use_case.py --domain climate   # climate only, all phases
+python use_case.py --skip-anomaly     # skip Phase 4 (much faster for dev)
 ```
 
-Or run a single domain:
+The four phases and their individual scripts (can also be called directly):
 
-```bash
-python run_sat.py                # satellite: M1-M5
-python run_ecg.py                # ECG: M1-M5
-python run_climate.py            # climate: M1-M5
-```
-
-### Run the anomaly detection use case (after core)
-
-```bash
-python use_cases/sat_anomaly.py      # satellite E1+E2
-python use_cases/ecg_anomaly.py      # ECG E1+E2
-python use_cases/climate_anomaly.py  # climate E1+E2
-```
-
-### Generate the HTML run report
-
-After running a domain pipeline, produce a self-contained report and open it in your browser:
-
-```bash
-python -m scripts.utils.html_report --results-dir results/satellite
-python -m scripts.utils.html_report --results-dir results/ECG     --domain ecg
-python -m scripts.utils.html_report --results-dir results/Climate --domain climate
-```
-
-### Export to CWL (Common Workflow Language)
-
-```bash
-python -m scripts.utils.cwl_export                # generates cwl/workflow.cwl + tool stubs
-python -m scripts.utils.cwl_export --core-only    # M1-M5 only
-```
+| Phase | What it does | Individual script |
+|-------|-------------|-------------------|
+| 1 — Core (M1-M5) | Data ingestion → provenance | `use_cases/run_{sat,ecg,climate}.py` |
+| 2 — CWL export | Sync `components.json` → `cwl/` | `python -m scripts.utils.cwl_export` |
+| 3 — HTML reports | Self-contained run report per domain | `python -m scripts.utils.html_report` |
+| 4 — Anomaly (E1+E2) | Fault injection + ML evaluation | `use_cases/{sat,ecg,climate}_anomaly.py` |
 
 ### Validate an adapter before running
 
@@ -89,19 +71,30 @@ python -m scripts.adapters.validator --adapter climate --path data/Climate/jena_
 
 ### CLI options
 
+Domain-specific args are forwarded automatically by `use_case.py`:
+
 ```bash
 # Satellite: restrict to specific experiment families
-python run_sat.py --families AccelerometerTest GyroTest
+python use_case.py --domain satellite --families AccelerometerTest GyroTest
 
 # ECG: restrict to specific records
-python run_ecg.py --records 100 106 108
+python use_case.py --domain ecg --records 100 106 108
 
 # Climate: restrict to specific years
-python run_climate.py --years 2011 2012 2013
+python use_case.py --domain climate --years 2011 2012 2013
 
-# Anomaly use case: fast mode (easy tier only)
+# Anomaly use case: fast mode / fewer variants
+python use_case.py --fast
+python use_case.py --n-variants 1 --seed 0
+```
+
+Or invoke individual runners directly:
+
+```bash
+python use_cases/run_sat.py --families AccelerometerTest GyroTest
+python use_cases/run_ecg.py --records 100 106 108
+python use_cases/run_climate.py --years 2011 2012 2013
 python use_cases/sat_anomaly.py --fast
-python use_cases/sat_anomaly.py --n-variants 1 --seed 0
 ```
 
 ---
@@ -198,7 +191,7 @@ from scripts.adapters.validator import validate_adapter
 ok, report = validate_adapter(MyDomainAdapter(), sample_path="path/to/data.csv")
 ```
 
-Then create a `run_my_domain.py` entry point following the pattern in `run_ecg.py`, `run_climate.py`, or `run_sat.py`.
+Then create a `use_cases/run_my_domain.py` entry point following the pattern in `use_cases/run_ecg.py` or `use_cases/run_climate.py`.
 
 Three adapters are already provided:
 
@@ -269,14 +262,14 @@ The component registry (`components.json`) lists all modules with their semantic
 ## Repository Structure
 
 ```
-run_sat.py          Entry point: satellite core pipeline (M1-M5)
-run_ecg.py          Entry point: ECG core pipeline (M1-M5)
-run_climate.py      Entry point: climate core pipeline (M1-M5)
-use_case.py         Dispatcher: run one or all domain cores
+use_case.py         Full orchestrator: all four phases, all domains
 use_cases/
-  sat_anomaly.py    Satellite anomaly detection (E1+E2)
-  ecg_anomaly.py    ECG anomaly detection (E1+E2)
-  climate_anomaly.py Climate anomaly detection (E1+E2)
+  run_sat.py        Core pipeline: satellite (M1-M5)
+  run_ecg.py        Core pipeline: ECG (M1-M5)
+  run_climate.py    Core pipeline: climate (M1-M5)
+  sat_anomaly.py    Anomaly detection: satellite (E1+E2)
+  ecg_anomaly.py    Anomaly detection: ECG (E1+E2)
+  climate_anomaly.py Anomaly detection: climate (E1+E2)
 scripts/
   pipeline_core.py        Domain-agnostic M2/M3 logic (shared feature helpers)
   evaluator.py            Feature engineering + 5 ML detectors (M3, E2)

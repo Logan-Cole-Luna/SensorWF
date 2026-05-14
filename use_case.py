@@ -1,131 +1,228 @@
 """
-use_case.py — SensorWF Core Framework Runner
-=============================================
-Dispatches to the satellite, ECG, or climate core pipeline (M1-M3, M6, M7).
+use_case.py — SensorWF Full Orchestrator
+=========================================
+Single entry point that runs all workflow stages in sequence:
 
-The core framework provides reusable modules for data ingestion, quality
-assessment, feature engineering, semantic annotation, and provenance export.
-The anomaly detection use case (M4 fault injection + M5 ML evaluation) is
-implemented as a separate extension -- see use_cases/ directory.
+  Phase 1 — Core pipelines      M1-M5 per domain (data ingestion → provenance)
+  Phase 2 — CWL export          Sync components.json → cwl/ tools
+  Phase 3 — HTML run reports    One self-contained HTML report per domain
+  Phase 4 — Anomaly detection   E1 fault injection + E2 ML evaluation (run last)
+
+Each phase is independent.  Individual scripts can still be called directly:
+
+  Core runners  : use_cases/run_{sat,ecg,climate}.py
+  Anomaly       : use_cases/{sat,ecg,climate}_anomaly.py
+  CWL export    : python -m scripts.utils.cwl_export
+  HTML report   : python -m scripts.utils.html_report --results-dir results/<domain>
 
 Usage
 ─────
-  python use_case.py                          # run all three domain cores
-  python use_case.py --domain satellite       # satellite core only
-  python use_case.py --domain ecg             # ECG core only
-  python use_case.py --domain climate         # climate core only
+  python use_case.py                         # all domains, all phases
+  python use_case.py --domain satellite      # satellite only, all phases
+  python use_case.py --domain ecg            # ECG only, all phases
+  python use_case.py --domain climate        # climate only, all phases
 
-  # Pass domain-specific args after --domain <name>:
+  python use_case.py --skip-anomaly          # skip Phase 4 (much faster)
+  python use_case.py --skip-report           # skip HTML generation
+  python use_case.py --skip-cwl              # skip CWL regeneration
+
+  # Domain-specific args are forwarded to the relevant core runner and anomaly script:
   python use_case.py --domain satellite --families AccelerometerTest
-  python use_case.py --domain ecg --records 100 106
-  python use_case.py --domain climate --years 2011
-
-Anomaly detection use case (M4 + M5)
-──────────────────────────────────────
-  Run after the core framework to add fault injection and ML evaluation:
-
-    python use_cases/sat_anomaly.py [--families ...]
-    python use_cases/ecg_anomaly.py [--records ...]
-    python use_cases/climate_anomaly.py [--years ...]
-
-Core pipeline outputs
-──────────────────────
-  results/satellite/<Family>/
-    cdh_clean.csv  adcs_clean.csv  quality_report.json  *.png
-    provenance.ttl  workflow_spec.ttl  semantic/
-
-  results/ECG/mitdb/record_<id>/
-    signal_clean.csv  quality_report.json  semantic/
-
-  results/Climate/jena/<period>/
-    signal_clean.csv  quality_report.json  semantic/
+  python use_case.py --domain ecg --records 100 106 --rerun
+  python use_case.py --domain climate --years 2011 2012
+  python use_case.py --seed 42 --n-variants 2 --fast
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
-import os
 
+_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-# ── CLI ─────────────────────────────────────────────────────────────────────────
+# ── Script paths ──────────────────────────────────────────────────────────────
 
-_ap = argparse.ArgumentParser(
-    description="SensorWF core framework runner (satellite | ecg | climate | all)",
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-    epilog=__doc__,
-    add_help=True,
-)
-_ap.add_argument(
-    "--domain",
-    choices=["satellite", "ecg", "climate", "all"],
-    default="all",
-    help="Which domain core to run (default: all)",
-)
-_known, _extra = _ap.parse_known_args()
+CORE_RUNNERS = {
+    "satellite": os.path.join("use_cases", "run_sat.py"),
+    "ecg":       os.path.join("use_cases", "run_ecg.py"),
+    "climate":   os.path.join("use_cases", "run_climate.py"),
+}
 
-DOMAIN      = _known.domain
-EXTRA_ARGS  = _extra
+ANOMALY_RUNNERS = {
+    "satellite": os.path.join("use_cases", "sat_anomaly.py"),
+    "ecg":       os.path.join("use_cases", "ecg_anomaly.py"),
+    "climate":   os.path.join("use_cases", "climate_anomaly.py"),
+}
 
-
-# ── Runner dispatch ──────────────────────────────────────────────────────────────
-
-RUNNERS = {
-    "satellite": "run_sat.py",
-    "ecg":       "run_ecg.py",
-    "climate":   "run_climate.py",
+REPORT_ARGS: dict[str, list[str]] = {
+    "satellite": ["--results-dir", os.path.join("results", "satellite"), "--domain", "satellite"],
+    "ecg":       ["--results-dir", os.path.join("results", "ECG"),       "--domain", "ecg"],
+    "climate":   ["--results-dir", os.path.join("results", "Climate"),   "--domain", "climate"],
 }
 
 DOMAIN_LABELS = {
-    "satellite": "CubeSat Telemetry (core: M1-M3, M6, M7)",
-    "ecg":       "Biomedical ECG (core: M1-M3, M6, M7)",
-    "climate":   "Atmospheric Climate (core: M1-M3, M6, M7)",
+    "satellite": "CubeSat Telemetry",
+    "ecg":       "Biomedical ECG",
+    "climate":   "Atmospheric Climate",
 }
 
+ALL_DOMAINS = ["satellite", "ecg", "climate"]
 
-def run_domain(domain: str, extra: list[str]) -> int:
-    """Run one domain's core pipeline as a subprocess. Returns the exit code."""
-    script = RUNNERS[domain]
-    label  = DOMAIN_LABELS[domain]
-    cmd    = [sys.executable, script] + extra
-    print(f"\n{'=' * 70}")
-    print(f"SensorWF — {label}")
-    print(f"Command: {' '.join(cmd)}")
-    print("=" * 70)
-    result = subprocess.run(cmd, cwd=os.path.dirname(os.path.abspath(__file__)))
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
+def _parse_args() -> tuple[argparse.Namespace, list[str]]:
+    ap = argparse.ArgumentParser(
+        description="SensorWF full orchestrator — runs all workflow stages",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    ap.add_argument(
+        "--domain",
+        choices=["satellite", "ecg", "climate", "all"],
+        default="all",
+        help="Which domain(s) to process (default: all)",
+    )
+    ap.add_argument("--skip-cwl",     action="store_true",
+                    help="Skip Phase 2: CWL regeneration")
+    ap.add_argument("--skip-report",  action="store_true",
+                    help="Skip Phase 3: HTML report generation")
+    ap.add_argument("--skip-anomaly", action="store_true",
+                    help="Skip Phase 4: anomaly detection (E1+E2)")
+    return ap.parse_known_args()
+
+
+# ── Subprocess helper ─────────────────────────────────────────────────────────
+
+def _run(cmd: list[str], label: str) -> int:
+    print(f"\n  {label}")
+    print(f"  $ {' '.join(cmd)}")
+    result = subprocess.run(cmd, cwd=_ROOT)
+    if result.returncode != 0:
+        print(f"  WARNING: '{label}' exited with code {result.returncode}")
     return result.returncode
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────────
+# ── Phase 1: Core pipelines ───────────────────────────────────────────────────
+
+def phase_core(domains: list[str], extra: list[str]) -> dict[str, int]:
+    print(f"\n{'=' * 70}")
+    print("  PHASE 1 — Core Pipelines (M1-M5)")
+    print(f"{'=' * 70}")
+    codes: dict[str, int] = {}
+    for domain in domains:
+        codes[domain] = _run(
+            [sys.executable, CORE_RUNNERS[domain]] + extra,
+            f"{DOMAIN_LABELS[domain]} core (M1-M5)",
+        )
+    return codes
+
+
+# ── Phase 2: CWL export ───────────────────────────────────────────────────────
+
+def phase_cwl() -> int:
+    print(f"\n{'=' * 70}")
+    print("  PHASE 2 — CWL Export")
+    print(f"{'=' * 70}")
+    return _run(
+        [sys.executable, "-m", "scripts.utils.cwl_export",
+         "--components", "components.json", "--output", "cwl"],
+        "Regenerate CWL tools from components.json",
+    )
+
+
+# ── Phase 3: HTML reports ─────────────────────────────────────────────────────
+
+def phase_reports(domains: list[str]) -> dict[str, int]:
+    print(f"\n{'=' * 70}")
+    print("  PHASE 3 — HTML Run Reports")
+    print(f"{'=' * 70}")
+    codes: dict[str, int] = {}
+    for domain in domains:
+        codes[domain] = _run(
+            [sys.executable, "-m", "scripts.utils.html_report", "--no-browser"]
+            + REPORT_ARGS[domain],
+            f"{DOMAIN_LABELS[domain]} HTML report",
+        )
+    return codes
+
+
+# ── Phase 4: Anomaly detection ────────────────────────────────────────────────
+
+def phase_anomaly(domains: list[str], extra: list[str]) -> dict[str, int]:
+    print(f"\n{'=' * 70}")
+    print("  PHASE 4 — Anomaly Detection (E1 fault injection + E2 ML evaluation)")
+    print(f"{'=' * 70}")
+    codes: dict[str, int] = {}
+    for domain in domains:
+        codes[domain] = _run(
+            [sys.executable, ANOMALY_RUNNERS[domain]] + extra,
+            f"{DOMAIN_LABELS[domain]} anomaly detection (E1+E2)",
+        )
+    return codes
+
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+
+def _print_summary(
+    phase_results: dict[str, dict[str, int]],
+    skipped: list[str],
+) -> bool:
+    any_failed = False
+    print(f"\n{'=' * 70}")
+    print("  SensorWF — Run Complete")
+    print(f"{'=' * 70}")
+    for phase, codes in phase_results.items():
+        for key, rc in codes.items():
+            label  = f"{phase} / {DOMAIN_LABELS.get(key, key)}"
+            status = "OK" if rc == 0 else f"FAILED (exit {rc})"
+            flag   = " *" if rc != 0 else ""
+            print(f"  {label:<50} {status}{flag}")
+            if rc != 0:
+                any_failed = True
+    for name in skipped:
+        print(f"  {name:<50} skipped")
+    print(f"{'=' * 70}")
+    if any_failed:
+        print("  (*) One or more stages failed — check output above.")
+    return any_failed
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
-    if DOMAIN == "all":
-        domains_to_run = ["satellite", "ecg", "climate"]
+    args, extra = _parse_args()
+    domains = ALL_DOMAINS if args.domain == "all" else [args.domain]
+
+    all_results: dict[str, dict[str, int]] = {}
+    skipped: list[str] = []
+
+    # Phase 1 — always runs
+    all_results["Core (M1-M5)"] = phase_core(domains, extra)
+
+    # Phase 2 — CWL export (once, domain-agnostic)
+    if args.skip_cwl:
+        skipped.append("CWL export")
     else:
-        domains_to_run = [DOMAIN]
+        rc = phase_cwl()
+        all_results["CWL export"] = {"registry": rc}
 
-    exit_codes: dict[str, int] = {}
-    for domain in domains_to_run:
-        rc = run_domain(domain, EXTRA_ARGS)
-        exit_codes[domain] = rc
-        if rc != 0:
-            print(f"\nWARNING: {domain} runner exited with code {rc}")
+    # Phase 3 — HTML reports
+    if args.skip_report:
+        skipped.append("HTML report")
+    else:
+        all_results["HTML report"] = phase_reports(domains)
 
-    print("\n" + "=" * 70)
-    print("SensorWF — Core framework complete")
-    for domain, rc in exit_codes.items():
-        status = "OK" if rc == 0 else f"FAILED (exit {rc})"
-        label  = DOMAIN_LABELS[domain].split("(")[0].strip()
-        print(f"  {label:<28} : {status}")
-    print("=" * 70)
-    print("\nTo run anomaly detection use case on top of core outputs:")
-    print("  python use_cases/sat_anomaly.py")
-    print("  python use_cases/ecg_anomaly.py")
-    print("  python use_cases/climate_anomaly.py")
+    # Phase 4 — anomaly detection (last — longest stage)
+    if args.skip_anomaly:
+        skipped.append("Anomaly (E1+E2)")
+    else:
+        all_results["Anomaly (E1+E2)"] = phase_anomaly(domains, extra)
 
-    if any(rc != 0 for rc in exit_codes.values()):
-        sys.exit(1)
+    any_failed = _print_summary(all_results, skipped)
+    sys.exit(1 if any_failed else 0)
 
 
 if __name__ == "__main__":

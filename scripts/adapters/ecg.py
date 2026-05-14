@@ -37,10 +37,10 @@ class ECGAdapter(DomainAdapter):
     name        = "Biomedical ECG (MIT-BIH Arrhythmia Database)"
     description = ("2-lead ambulatory ECG at 360 Hz. 48 30-minute records annotated "
                    "by cardiologists for beat type. Standard benchmark for arrhythmia detection.")
-    channels    = ["MLII", "V5"]   # default; overridden by load() based on actual columns
     native_hz   = _NATIVE_HZ
 
     def __init__(self, target_hz: float = _TARGET_HZ, session_minutes: float = 5.0):
+        self.channels        = ["MLII", "V5"]  # instance-level; updated by load()
         self.target_hz       = float(target_hz)
         self.decimate        = max(1, int(round(_NATIVE_HZ / target_hz)))
         self.session_samples = int(session_minutes * 60 * target_hz)

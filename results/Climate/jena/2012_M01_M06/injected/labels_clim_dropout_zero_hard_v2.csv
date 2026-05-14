@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_dropout_zero,5661,21909,high,['wv_ms']

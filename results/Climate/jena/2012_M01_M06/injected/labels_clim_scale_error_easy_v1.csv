@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_scale_error,21106,24250,low,['rho_gm3']

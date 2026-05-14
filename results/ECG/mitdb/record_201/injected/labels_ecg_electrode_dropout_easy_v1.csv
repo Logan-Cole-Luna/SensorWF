@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+ecg_electrode_dropout,10350,12149,low,['V1']

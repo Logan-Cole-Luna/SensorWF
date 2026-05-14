@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+clim_sensor_drift,10306,20264,medium,['max_wv_ms']

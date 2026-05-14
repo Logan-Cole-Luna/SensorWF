@@ -76,9 +76,14 @@ class DomainAdapter(ABC):
     def get_ontology_path(self) -> str:
         """Return path to domain OWL ontology file (written by ensure_ontology)."""
 
-    @abstractmethod
     def get_fault_types(self) -> list[dict]:
-        """Return list of fault-type dicts understood by the domain injector."""
+        """
+        Return list of fault-type dicts understood by the domain injector (E1).
+
+        Override when using the anomaly detection use case (E1/E2).
+        Core-only adapters (M1-M5) do not need to implement this.
+        """
+        return []
 
     # ------------------------------------------------------------------
     # Optional overrides

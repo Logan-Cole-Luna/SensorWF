@@ -9,7 +9,7 @@ label: "Semantic Annotation"
 doc: >
   Maps ML detector evidence (feature importances, anomaly scores) and feature names to domain OWL ontology classes. Produces a SPARQL-queryable knowledge graph in RDF/Turtle and GraphML. In core mode, edges encode feature-class membership; in use-case mode, all five detector results are aggregated — IsolationForest importance-weighted edges plus per-detector performance nodes (AUC-ROC, F1, recall) and consensus evidence edges.
 
-baseCommand: [python, "SemanticAnnotation"]
+baseCommand: [python, "scripts/pipeline_core.py"]
 
 requirements:
   NetworkAccess:

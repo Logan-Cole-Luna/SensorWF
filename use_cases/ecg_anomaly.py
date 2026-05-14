@@ -10,8 +10,9 @@ are directly analysis-ready for downstream anomaly detection tasks.
 
 Prerequisites
 ─────────────
-  Run the core pipeline first:
-    python run_ecg.py [--records 100 106 ...]
+  Run the core pipeline first (or let use_case.py handle it):
+    python use_case.py --domain ecg --skip-anomaly
+    python use_cases/run_ecg.py [--records 100 106 ...]
 
   Core outputs consumed:
     results/ECG/mitdb/record_<id>/signal_clean.csv
@@ -36,7 +37,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import time
+from pathlib import Path
+
+# Ensure project root is in Python path for relative imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 import pandas as pd
@@ -168,6 +174,7 @@ def run_ecg_anomaly(
     seed: int,
     n_variants: int,
     fast: bool,
+    rerun: bool = False,
 ) -> dict:
     """Run M4 + M5 for one ECG record, consuming core pipeline outputs."""
     record_dir = os.path.join(results_dir, f"record_{record_id}")
@@ -177,6 +184,11 @@ def run_ecg_anomaly(
     if not os.path.isfile(clean_csv):
         print(f"  SKIP {record_id}: {clean_csv} not found — run run_ecg.py first")
         return {}
+
+    ml_cache = os.path.join(inj_dir, "ml_results.csv")
+    if not rerun and os.path.isfile(ml_cache):
+        print(f"  [CACHE] record {record_id} — skipping M5 (pass --rerun to force)")
+        return {"record_id": record_id, "n_injected": 0, "n_ml_evals": 0, "timing_s": {}}
 
     os.makedirs(inj_dir, exist_ok=True)
 
@@ -302,6 +314,8 @@ def main():
                         help="Injection variants per fault × tier (default: 2)")
     parser.add_argument("--fast",        action="store_true",
                         help="Easy tier only (faster for testing)")
+    parser.add_argument("--rerun",       action="store_true",
+                        help="Ignore cached ml_results.csv and rerun M4+M5")
     args = parser.parse_args()
 
     print("=" * 64)
@@ -319,6 +333,7 @@ def main():
             seed=args.seed,
             n_variants=args.n_variants,
             fast=args.fast,
+            rerun=args.rerun,
         )
         if r:
             results.append(r)

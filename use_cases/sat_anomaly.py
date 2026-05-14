@@ -10,8 +10,9 @@ analysis-ready for downstream anomaly detection tasks.
 
 Prerequisites
 ─────────────
-  Run the core pipeline first:
-    python run_sat.py [--families AccelerometerTest ...]
+  Run the core pipeline first (or let use_case.py handle it):
+    python use_case.py --domain satellite --skip-anomaly
+    python use_cases/run_sat.py [--families AccelerometerTest ...]
 
   Core outputs consumed:
     results/satellite/<Family>/cdh_clean.csv
@@ -40,7 +41,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
+
+# Ensure project root is in Python path for relative imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 import pandas as pd
@@ -88,6 +94,7 @@ def run_sat_anomaly(
     n_variants: int,
     tiers: list[str] | None,
     recorder: ProvenanceRecorder,
+    rerun: bool = False,
 ) -> None:
     """Run E1 + E2 for each satellite family, then rebuild M4 KG with ML importances."""
     adapter = SatelliteAdapter()
@@ -100,6 +107,11 @@ def run_sat_anomaly(
 
         if not os.path.isfile(cdh_path):
             print(f"  SKIP {family}: {cdh_path} not found — run run_sat.py first")
+            continue
+
+        ml_cache = os.path.join(injected_dir, "ml_evaluation.json")
+        if not rerun and os.path.isfile(ml_cache):
+            print(f"  [CACHE] {family} — skipping E1+E2 (pass --rerun to force)")
             continue
 
         print(f"\n── {family} {'─' * (60 - len(family))}")
@@ -181,6 +193,8 @@ def main():
     parser.add_argument("--n-variants",  type=int, default=2)
     parser.add_argument("--fast",        action="store_true",
                         help="Easy tier only")
+    parser.add_argument("--rerun",       action="store_true",
+                        help="Ignore cached ml_evaluation.json and rerun E1+E2")
     args = parser.parse_args()
 
     families = args.families if args.families else _ALL_FAMILIES
@@ -202,6 +216,7 @@ def main():
         n_variants=args.n_variants,
         tiers=tiers,
         recorder=recorder,
+        rerun=args.rerun,
     )
 
     prov_path = os.path.join(args.results_dir, "anomaly_provenance.ttl")

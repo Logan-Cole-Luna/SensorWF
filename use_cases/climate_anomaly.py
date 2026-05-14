@@ -10,8 +10,9 @@ are directly analysis-ready for downstream anomaly detection tasks.
 
 Prerequisites
 ─────────────
-  Run the core pipeline first:
-    python run_climate.py [--years 2009 2010 ...]
+  Run the core pipeline first (or let use_case.py handle it):
+    python use_case.py --domain climate --skip-anomaly
+    python use_cases/run_climate.py [--years 2009 2010 ...]
 
   Core outputs consumed:
     results/Climate/jena/<year>_M01_M06/signal_clean.csv
@@ -36,7 +37,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import time
+from pathlib import Path
+
+# Ensure project root is in Python path for relative imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 import pandas as pd
@@ -163,6 +169,7 @@ def run_climate_anomaly(
     seed: int,
     n_variants: int,
     fast: bool,
+    rerun: bool = False,
 ) -> dict:
     """Run M4 + M5 for one climate period, consuming core pipeline outputs."""
     period_label = f"{year}_M{months[0]:02d}_M{months[1]:02d}"
@@ -173,6 +180,11 @@ def run_climate_anomaly(
     if not os.path.isfile(clean_csv):
         print(f"  SKIP {period_label}: {clean_csv} not found — run run_climate.py first")
         return {}
+
+    ml_cache = os.path.join(inj_dir, "ml_results.csv")
+    if not rerun and os.path.isfile(ml_cache):
+        print(f"  [CACHE] {period_label} — skipping M5 (pass --rerun to force)")
+        return {"period": period_label, "n_injected": 0, "n_ml_evals": 0, "timing_s": {}}
 
     os.makedirs(inj_dir, exist_ok=True)
 
@@ -294,6 +306,8 @@ def main():
     parser.add_argument("--n-variants",  type=int, default=2)
     parser.add_argument("--fast",        action="store_true",
                         help="Easy tier only (faster for testing)")
+    parser.add_argument("--rerun",       action="store_true",
+                        help="Ignore cached ml_results.csv and rerun M4+M5")
     args = parser.parse_args()
 
     months = tuple(args.months)
@@ -313,6 +327,7 @@ def main():
             seed=args.seed,
             n_variants=args.n_variants,
             fast=args.fast,
+            rerun=args.rerun,
         )
         if r:
             results.append(r)

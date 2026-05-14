@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels
+ecg_powerline_noise,4051,9750,medium,"['MLII', 'V1']"

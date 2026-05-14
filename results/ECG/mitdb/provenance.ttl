@@ -20,10 +20,10 @@
 @prefix telwf: <https://example.org/telwf/workflow#> .
 
 # ── Workflow run ──────────────────────────────────────────────
-telwf:run_20260513T131427_4bc23e
+telwf:run_20260513T151138_052bb1
     a provone:Execution, prov:Activity ;
-    rdfs:label "TelWF pipeline run: run_20260513T131427_4bc23e" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    rdfs:label "TelWF pipeline run: run_20260513T151138_052bb1" ;
+    prov:startedAtTime "2026-05-13T15:11:38Z"^^xsd:dateTime ;
     prov:wasAssociatedWith telwf:TelWFAgent .
 
 telwf:TelWFAgent
@@ -36,563 +36,563 @@ telwf:TelWFAgent
 # ── Derivation chains ────────────────────────────────────────
 
 # ── Generic domain activities ──────────────────────────────
-sensorwf:M1_ECG_DataIngestion_b0d01866
+sensorwf:M1_ECG_DataIngestion_27ad6e81
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:38Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:38Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_816ec9c4
+sensorwf:M2_ECG_QualityAssessment_a78ffa1d
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:38Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:38Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_de1d1f5c
+sensorwf:M3_ECG_FeatureEngineering_fdfc79ce
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_c553b1a2
+sensorwf:M4_ECG_SemanticAnnotation_0b041b4d
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_813b177a
+sensorwf:M1_ECG_DataIngestion_e693a489
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_ee913f3e
+sensorwf:M2_ECG_QualityAssessment_0f7b2107
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:27Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_0fddd379
+sensorwf:M3_ECG_FeatureEngineering_fecaefac
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_bab3e601
+sensorwf:M4_ECG_SemanticAnnotation_8e1f5b3d
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_9ffc0de7
+sensorwf:M1_ECG_DataIngestion_32e32e4c
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_94403670
+sensorwf:M2_ECG_QualityAssessment_96e00c13
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_8a341fe8
+sensorwf:M3_ECG_FeatureEngineering_43a1d884
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_f9deb153
+sensorwf:M4_ECG_SemanticAnnotation_506649a4
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:39Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_f41af0a5
+sensorwf:M1_ECG_DataIngestion_1cf5ad5b
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_02503f75
+sensorwf:M2_ECG_QualityAssessment_e75c1309
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_898f5197
+sensorwf:M3_ECG_FeatureEngineering_d4105593
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_2f00ee68
+sensorwf:M4_ECG_SemanticAnnotation_954de2b9
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_60c9da9e
+sensorwf:M1_ECG_DataIngestion_6e642ce4
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_b269160b
+sensorwf:M2_ECG_QualityAssessment_cce6c070
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_8ec6728a
+sensorwf:M3_ECG_FeatureEngineering_1603635f
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_359c62b8
+sensorwf:M4_ECG_SemanticAnnotation_6c4e59f2
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:28Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_f6dee64e
+sensorwf:M1_ECG_DataIngestion_43d0e1ec
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_49538b09
+sensorwf:M2_ECG_QualityAssessment_c977d5c0
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_c0af0c03
+sensorwf:M3_ECG_FeatureEngineering_ca674c3b
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_c19bc67c
+sensorwf:M4_ECG_SemanticAnnotation_fd17fb5b
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_824fffe9
+sensorwf:M1_ECG_DataIngestion_06fe5f05
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_62fabd98
+sensorwf:M2_ECG_QualityAssessment_5014d09f
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_fefa0196
+sensorwf:M3_ECG_FeatureEngineering_c2c18e0d
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_76d7eb21
+sensorwf:M4_ECG_SemanticAnnotation_6b829411
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:40Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_d475dab3
+sensorwf:M1_ECG_DataIngestion_0a0337a5
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_e0f727b3
+sensorwf:M2_ECG_QualityAssessment_b07774bf
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_038569b1
+sensorwf:M3_ECG_FeatureEngineering_66307450
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_f9176869
+sensorwf:M4_ECG_SemanticAnnotation_290bf279
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_33a59e58
+sensorwf:M1_ECG_DataIngestion_d35f11dd
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_bb6be55b
+sensorwf:M2_ECG_QualityAssessment_e64851f4
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:29Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_ef65336d
+sensorwf:M3_ECG_FeatureEngineering_8b48199b
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_2951a334
+sensorwf:M4_ECG_SemanticAnnotation_024e99a6
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_3c6890e5
+sensorwf:M1_ECG_DataIngestion_9cc4f375
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_c2e7b1cf
+sensorwf:M2_ECG_QualityAssessment_5123c1da
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_010c30ac
+sensorwf:M3_ECG_FeatureEngineering_6a264673
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_7ae0d9f5
+sensorwf:M4_ECG_SemanticAnnotation_62b513cb
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_59f40830
+sensorwf:M1_ECG_DataIngestion_beb1f452
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_afcc04a6
+sensorwf:M2_ECG_QualityAssessment_733efebb
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:41Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_fad678fc
+sensorwf:M3_ECG_FeatureEngineering_3a9a5202
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_990bb92e
+sensorwf:M4_ECG_SemanticAnnotation_95d76203
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_1560a67c
+sensorwf:M1_ECG_DataIngestion_e13859cd
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_cb9e8d73
+sensorwf:M2_ECG_QualityAssessment_5b3f731b
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_cde790af
+sensorwf:M3_ECG_FeatureEngineering_2f0a3414
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_4b76028a
+sensorwf:M4_ECG_SemanticAnnotation_b94699d6
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:30Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_93b85fe1
+sensorwf:M1_ECG_DataIngestion_c2cd5c01
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_e032d7d6
+sensorwf:M2_ECG_QualityAssessment_599d7aa9
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_5792f3e2
+sensorwf:M3_ECG_FeatureEngineering_dd1fd642
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_1f635988
+sensorwf:M4_ECG_SemanticAnnotation_5b05faaf
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_b7a613c3
+sensorwf:M1_ECG_DataIngestion_4deabd08
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_08f61c24
+sensorwf:M2_ECG_QualityAssessment_c375fcc0
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_430101ad
+sensorwf:M3_ECG_FeatureEngineering_7a9ccc37
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_746583ec
+sensorwf:M4_ECG_SemanticAnnotation_5b858535
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:42Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_3c135928
+sensorwf:M1_ECG_DataIngestion_2e5d6334
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_1884e6dc
+sensorwf:M2_ECG_QualityAssessment_2c01e9e8
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_e49064db
+sensorwf:M3_ECG_FeatureEngineering_c974d0df
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_0c36b0c8
+sensorwf:M4_ECG_SemanticAnnotation_bc9660db
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_7aee4841
+sensorwf:M1_ECG_DataIngestion_3f18d0a9
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_6aef3e45
+sensorwf:M2_ECG_QualityAssessment_e27aabef
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:31Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_4bc20ab8
+sensorwf:M3_ECG_FeatureEngineering_2ae403b3
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_5038c565
+sensorwf:M4_ECG_SemanticAnnotation_a350ee70
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_8064d522
+sensorwf:M1_ECG_DataIngestion_6bce2866
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_46871bc1
+sensorwf:M2_ECG_QualityAssessment_0ca0c281
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_18936f35
+sensorwf:M3_ECG_FeatureEngineering_15d2eda7
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_4e43260d
+sensorwf:M4_ECG_SemanticAnnotation_343ef98a
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_d9677597
+sensorwf:M1_ECG_DataIngestion_f3a4dda0
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_8ebd4e0f
+sensorwf:M2_ECG_QualityAssessment_1577e2cc
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:43Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_44d36c3c
+sensorwf:M3_ECG_FeatureEngineering_e1bd9efe
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_8a3acdd8
+sensorwf:M4_ECG_SemanticAnnotation_3b67bf7d
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_1c811935
+sensorwf:M1_ECG_DataIngestion_9c462f51
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_8fb3c23f
+sensorwf:M2_ECG_QualityAssessment_4af0de9b
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_56802050
+sensorwf:M3_ECG_FeatureEngineering_cb4314b2
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_76efa741
+sensorwf:M4_ECG_SemanticAnnotation_3c6bd4e4
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:32Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M1_ECG_DataIngestion_a9fafceb
+sensorwf:M1_ECG_DataIngestion_408ebb17
     a prov:Activity ;
     rdfs:label "M1_ECG_DataIngestion" ;
-    prov:startedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M2_ECG_QualityAssessment_8ef95ea0
+sensorwf:M2_ECG_QualityAssessment_1df61578
     a prov:Activity ;
     rdfs:label "M2_ECG_QualityAssessment" ;
-    prov:startedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M3_ECG_FeatureEngineering_2a2ca963
+sensorwf:M3_ECG_FeatureEngineering_07cc9507
     a prov:Activity ;
     rdfs:label "M3_ECG_FeatureEngineering" ;
-    prov:startedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
-sensorwf:M4_ECG_SemanticAnnotation_46970756
+sensorwf:M4_ECG_SemanticAnnotation_23760262
     a prov:Activity ;
     rdfs:label "M4_ECG_SemanticAnnotation" ;
-    prov:startedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
-    prov:endedAtTime "2026-05-13T13:14:33Z"^^xsd:dateTime ;
+    prov:startedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-13T15:11:44Z"^^xsd:dateTime ;
     sensorwf:domain "biomedical_ecg" .
 
