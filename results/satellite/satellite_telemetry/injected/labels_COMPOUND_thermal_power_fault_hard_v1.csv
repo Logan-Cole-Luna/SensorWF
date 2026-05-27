@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+COMPOUND_thermal_power_fault,57,288,high,"['BATT_CHR_V', 'SYS_I', 'SYS_V', 'TEMP_OBDH']",hard

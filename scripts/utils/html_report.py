@@ -1,7 +1,7 @@
 """
 html_report.py — Lightweight academic-style HTML run report for SensorWF.
 
-Reads existing result artefacts from the results directory and assembles a
+Reads existing result artifacts from the results directory and assembles a
 single self-contained HTML file.  Plots are included selectively (summary
 dashboard + at most two supplemental figures per family) to keep file size
 reasonable.  Opens the file in the default browser.
@@ -633,7 +633,7 @@ def _semantic_section(results_dir: str, ontology_path: str = "") -> str:
 
     safe_edges = edges_df if (edges_df is not None and not edges_df.empty) else pd.DataFrame()
     graph_html = _kg_graph_html(nodes_df, safe_edges) if nodes_df is not None else \
-                 "<p class='na'>No knowledge graph data found. Run the core pipeline (M4) to generate KG artefacts.</p>"
+                 "<p class='na'>No knowledge graph data found. Run the core pipeline (M4) to generate KG artifacts.</p>"
 
     return f"""
 <section id="semantic-kg">

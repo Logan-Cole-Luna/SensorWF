@@ -22,7 +22,7 @@
         "biomedical_ecg",
         "atmospheric_climate"
       ],
-      "description": "Domain-adaptive ingestion that normalises raw sensor archives into a standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface.",
+      "description": "Domain-adaptive ingestion that normalizes raw sensor archives into a standardized time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface.",
       "inputs": [
         {
           "name": "raw_files",
@@ -258,7 +258,7 @@
         {
           "name": "kg_graphml",
           "type": "GraphML",
-          "description": "Knowledge graph in GraphML for visualisation"
+          "description": "Knowledge graph in GraphML for visualization"
         },
         {
           "name": "nodes_csv",
@@ -515,7 +515,7 @@
           "name": "lof_n_neighbors",
           "type": "int",
           "default": 20,
-          "description": "Local Outlier Factor neighbourhood size"
+          "description": "Local Outlier Factor neighborhood size"
         },
         {
           "name": "evt_pre_pct",

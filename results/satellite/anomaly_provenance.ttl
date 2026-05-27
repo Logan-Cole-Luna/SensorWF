@@ -20,10 +20,11 @@
 @prefix telwf: <https://example.org/telwf/workflow#> .
 
 # ── Workflow run ──────────────────────────────────────────────
-telwf:sensorwf_sat_anomaly_20260513T131725
+telwf:sensorwf_sat_anomaly_20260514T175027
     a provone:Execution, prov:Activity ;
-    rdfs:label "TelWF pipeline run: sensorwf_sat_anomaly_20260513T131725" ;
-    prov:startedAtTime "2026-05-13T13:17:25Z"^^xsd:dateTime ;
+    rdfs:label "TelWF pipeline run: sensorwf_sat_anomaly_20260514T175027" ;
+    prov:startedAtTime "2026-05-14T17:50:27Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-14T17:51:07Z"^^xsd:dateTime ;
     prov:wasAssociatedWith telwf:TelWFAgent .
 
 telwf:TelWFAgent
@@ -33,4 +34,139 @@ telwf:TelWFAgent
     telwf:platform "macOS-26.3.1-arm64-arm-64bit-Mach-O" .
 
 # ── Module executions ────────────────────────────────────────
+# E1_FaultInjection (satellite_telemetry)
+telwf:E1_FaultInjection_3b3fc558
+    a prov:Activity, provone:Execution ;
+    rdfs:label "E1_FaultInjection_satellite_telemetry" ;
+    provone:wasPartOf telwf:sensorwf_sat_anomaly_20260514T175027 ;
+    prov:startedAtTime "2026-05-14T17:50:27Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-14T17:51:07Z"^^xsd:dateTime ;
+    telwf:status "success" ;
+    prov:used telwf:E1_FaultInjection_3b3fc558_in_cdh_clean, telwf:E1_FaultInjection_3b3fc558_in_adcs_clean, telwf:E1_FaultInjection_3b3fc558_in_seed, telwf:E1_FaultInjection_3b3fc558_in_n_variants ;
+    prov:wasAssociatedWith telwf:TelWFAgent .
+
+telwf:E1_FaultInjection_3b3fc558_in_cdh_clean
+    a prov:Entity ;
+    rdfs:label "cdh_clean" ;
+    telwf:sha256 "01817e4b402f724fa771f1a2b67d307c6d63909dda47b3ad774ebab838a6c157" ;
+    telwf:path "results/satellite/satellite_telemetry/cdh_clean.csv" ;
+    telwf:rows "333"^^xsd:integer ;
+    .
+
+telwf:E1_FaultInjection_3b3fc558_in_adcs_clean
+    a prov:Entity ;
+    rdfs:label "adcs_clean" ;
+    telwf:sha256 "3ab080e2381ed77138b59144b2b8724cd7fdf72ca78c30740254ff803b078c2f" ;
+    telwf:path "results/satellite/satellite_telemetry/adcs_clean.csv" ;
+    telwf:rows "333"^^xsd:integer ;
+    .
+
+telwf:E1_FaultInjection_3b3fc558_in_seed
+    a prov:Entity ;
+    rdfs:label "seed" ;
+    telwf:value "42"^^xsd:integer ;
+    .
+
+telwf:E1_FaultInjection_3b3fc558_in_n_variants
+    a prov:Entity ;
+    rdfs:label "n_variants" ;
+    telwf:value "2"^^xsd:integer ;
+    .
+
+telwf:E1_FaultInjection_3b3fc558_out_injected_variants
+    a prov:Entity ;
+    rdfs:label "injected_variants" ;
+    telwf:path "results/satellite/satellite_telemetry/injected" ;
+    prov:wasGeneratedBy telwf:E1_FaultInjection_3b3fc558 .
+
+telwf:E1_FaultInjection_3b3fc558_out_injection_summary
+    a prov:Entity ;
+    rdfs:label "injection_summary" ;
+    telwf:sha256 "39299e6788da56a482927085753ccf9fd23f07a6aa061765ae4cfb0f08e83e98" ;
+    telwf:path "results/satellite/satellite_telemetry/injected/injection_summary.csv" ;
+    prov:wasGeneratedBy telwf:E1_FaultInjection_3b3fc558 .
+
+# E2_AnomalyDetection (satellite_telemetry)
+telwf:E2_AnomalyDetection_6c044129
+    a prov:Activity, provone:Execution ;
+    rdfs:label "E2_AnomalyDetection_satellite_telemetry" ;
+    provone:wasPartOf telwf:sensorwf_sat_anomaly_20260514T175027 ;
+    prov:startedAtTime "2026-05-14T17:50:27Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-14T17:51:07Z"^^xsd:dateTime ;
+    telwf:status "success" ;
+    prov:used telwf:E2_AnomalyDetection_6c044129_in_injected_variants, telwf:E2_AnomalyDetection_6c044129_in_cdh_clean, telwf:E2_AnomalyDetection_6c044129_in_adcs_clean ;
+    prov:wasAssociatedWith telwf:TelWFAgent .
+
+telwf:E2_AnomalyDetection_6c044129_in_injected_variants
+    a prov:Entity ;
+    rdfs:label "injected_variants" ;
+    telwf:path "results/satellite/satellite_telemetry/injected" ;
+    .
+
+telwf:E2_AnomalyDetection_6c044129_in_cdh_clean
+    a prov:Entity ;
+    rdfs:label "cdh_clean" ;
+    telwf:rows "333"^^xsd:integer ;
+    .
+
+telwf:E2_AnomalyDetection_6c044129_in_adcs_clean
+    a prov:Entity ;
+    rdfs:label "adcs_clean" ;
+    telwf:rows "333"^^xsd:integer ;
+    .
+
+telwf:E2_AnomalyDetection_6c044129_out_ml_evaluation_json
+    a prov:Entity ;
+    rdfs:label "ml_evaluation_json" ;
+    telwf:sha256 "e3a50f995da4c85876f405b64c6c31077dfba728bb8dce1284cfd5b7a1f88fe0" ;
+    telwf:path "results/satellite/satellite_telemetry/injected/ml_evaluation.json" ;
+    prov:wasGeneratedBy telwf:E2_AnomalyDetection_6c044129 .
+
+telwf:E2_AnomalyDetection_6c044129_out_ml_metrics_csv
+    a prov:Entity ;
+    rdfs:label "ml_metrics_csv" ;
+    telwf:sha256 "7a0d6e682478b0bce96df8b5836c6dd8de0521395cc4606de11a00597c349326" ;
+    telwf:path "results/satellite/satellite_telemetry/injected/ml_metrics_by_tier.csv" ;
+    prov:wasGeneratedBy telwf:E2_AnomalyDetection_6c044129 .
+
+# M4_SemanticAnnotation (global)
+telwf:M4_SemanticAnnotation_7e50aa3f
+    a prov:Activity, provone:Execution ;
+    rdfs:label "M4_SemanticAnnotation" ;
+    provone:wasPartOf telwf:sensorwf_sat_anomaly_20260514T175027 ;
+    prov:startedAtTime "2026-05-14T17:51:07Z"^^xsd:dateTime ;
+    prov:endedAtTime "2026-05-14T17:51:07Z"^^xsd:dateTime ;
+    telwf:status "success" ;
+    prov:used telwf:M4_SemanticAnnotation_7e50aa3f_in_ontology_owl ;
+    prov:wasAssociatedWith telwf:TelWFAgent .
+
+telwf:M4_SemanticAnnotation_7e50aa3f_in_ontology_owl
+    a prov:Entity ;
+    rdfs:label "ontology_owl" ;
+    telwf:sha256 "a3474ee82cab63303b694fbf3426e147b41538d836e37975ff28e79a93bfa2d5" ;
+    telwf:path "results/ontologies/satellitesystem.owl" ;
+    .
+
+telwf:M4_SemanticAnnotation_7e50aa3f_out_nodes_csv
+    a prov:Entity ;
+    rdfs:label "nodes_csv" ;
+    telwf:sha256 "efb87946b629ab2a91dc9ef682b081d1581a7ac33e10f7471f4f0a10a28ed765" ;
+    telwf:path "results/satellite/semantic/sat_enhanced_kg_nodes.csv" ;
+    prov:wasGeneratedBy telwf:M4_SemanticAnnotation_7e50aa3f .
+
+telwf:M4_SemanticAnnotation_7e50aa3f_out_edges_csv
+    a prov:Entity ;
+    rdfs:label "edges_csv" ;
+    telwf:sha256 "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b" ;
+    telwf:path "results/satellite/semantic/sat_enhanced_kg_edges.csv" ;
+    prov:wasGeneratedBy telwf:M4_SemanticAnnotation_7e50aa3f .
+
+telwf:M4_SemanticAnnotation_7e50aa3f_out_turtle
+    a prov:Entity ;
+    rdfs:label "turtle" ;
+    telwf:sha256 "9b60dda210d831394dde5952a5e63ca29c5d030994cc25225d90df51d7ef1d42" ;
+    telwf:path "results/satellite/semantic/sat_enhanced_kg.ttl" ;
+    prov:wasGeneratedBy telwf:M4_SemanticAnnotation_7e50aa3f .
+
 # ── Derivation chains ────────────────────────────────────────
+telwf:E2_AnomalyDetection_6c044129_in_injected_variants prov:wasDerivedFrom telwf:E1_FaultInjection_3b3fc558_out_injected_variants .

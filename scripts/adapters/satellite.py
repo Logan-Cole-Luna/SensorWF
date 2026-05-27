@@ -498,4 +498,5 @@ class SatelliteAdapter(DomainAdapter):
             {"tag": "W1_wheel_runaway",             "description": "Reaction wheel runaway (unbounded spin-up)",    "target": "adcs"},
             {"tag": "W2_wheel_stiction_stop",       "description": "Reaction wheel stiction / stop",                "target": "adcs"},
             {"tag": "COMPOUND_thermal_power_fault", "description": "Simultaneous thermal + power rail fault",       "target": "cdh"},
+            {"tag": "COMPOUND_adcs_power_fault",   "description": "Simultaneous ADCS + power rail fault",           "target": "adcs"},
         ]

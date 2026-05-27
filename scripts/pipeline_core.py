@@ -112,7 +112,7 @@ def _rolling_spectral_features(
 
     freqs = np.fft.rfftfreq(window, d=1.0 / max(sample_hz, 1e-6))
 
-    # Centre each channel, pad all at once → (n + window - 1, nc)
+    # Center each channel, pad all at once → (n + window - 1, nc)
     x2d_c = x2d.astype(float) - x2d.mean(axis=0, keepdims=True)
     x_pad  = np.pad(x2d_c, ((window - 1, 0), (0, 0)), mode="edge")
 
@@ -127,7 +127,7 @@ def _rolling_spectral_features(
             writeable = False,
         ).copy()                                    # (n, nc, window)
     except Exception:
-        # Fallback: per-channel loop (original behaviour)
+        # Fallback: per-channel loop (original behavior)
         for ci in range(nc):
             x_c = x2d_c[:, ci]
             xp  = np.pad(x_c, (window - 1, 0), mode="edge")
@@ -493,7 +493,7 @@ def build_semantic_kg(
     feature_names   : list of feature column names from M3
     class_map       : {channel_name_or_prefix: ontology_class_uri}
                       Exact match is tried first, then prefix match.
-    output_dir      : directory to write artefacts
+    output_dir      : directory to write artifacts
     ontology_path   : path to domain OWL file (recorded in Turtle header)
     ml_importances  : optional {feature_name: importance} from IsolationForest
     file_prefix     : prepended to output filenames (e.g. "ecg_")
@@ -501,7 +501,7 @@ def build_semantic_kg(
 
     Returns
     -------
-    dict of {artefact_key: file_path}
+    dict of {artifact_key: file_path}
     """
     os.makedirs(output_dir, exist_ok=True)
     importances = ml_importances or {}
@@ -566,7 +566,7 @@ def build_semantic_kg(
 
 
 # ---------------------------------------------------------------------------
-# Generic visualisation -- time-series channel overview
+# Generic visualization -- time-series channel overview
 # ---------------------------------------------------------------------------
 
 def plot_channels(

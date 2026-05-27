@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+A4_imu_correlation_break,189,291,high,"[np.str_('MAG_Y'), np.str_('ACCEL_X'), np.str_('ACCEL_Y')]",hard

@@ -2,7 +2,7 @@
 base.py -- Abstract base class for SensorWF domain adapters.
 
 Each adapter implements M1 (data ingestion) for a specific domain and
-returns a standardised DataFrame compatible with pipeline_core M2-M5.
+returns a standardized DataFrame compatible with pipeline_core M2-M5.
 
 The base class also provides adaptive M4 ontology generation: calling
 ensure_ontology() builds a domain-specific OWL file from the adapter's
@@ -40,7 +40,7 @@ def _tag_to_classname(tag: str) -> str:
 class DomainAdapter(ABC):
     """
     Abstract M1 adapter: loads raw domain data and returns a clean,
-    standardised DataFrame for downstream SensorWF modules.
+    standardized DataFrame for downstream SensorWF modules.
 
     Required columns in returned DataFrame:
       timestamp : pd.Timestamp  (datetime index)
@@ -62,7 +62,7 @@ class DomainAdapter(ABC):
 
     @abstractmethod
     def load(self, path: str, **kwargs) -> pd.DataFrame:
-        """Load raw file(s) → normalised DataFrame."""
+        """Load raw file(s) → normalized DataFrame."""
 
     @abstractmethod
     def get_quality_config(self) -> dict:

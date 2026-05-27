@@ -509,14 +509,18 @@ def fig_provenance(
     ttl_path: str = os.path.join("results", "satellite", "provenance.ttl"),
     out_path: str = os.path.join(_FIGURES_DIR, "fig_provenance.png"),
 ) -> None:
-    """Bipartite PROV-O activity / entity graph parsed from provenance.ttl."""
-    import networkx as nx
+    """Hierarchical PROV-O activity/entity diagram parsed from provenance.ttl."""
+    from matplotlib.patches import FancyBboxPatch
 
+    # Prefer anomaly_provenance.ttl which carries richer module trace data
+    _alt = os.path.join(os.path.dirname(ttl_path), "anomaly_provenance.ttl")
+    if os.path.isfile(_alt):
+        ttl_path = _alt
     if not os.path.isfile(ttl_path):
         print(f"  SKIP fig_provenance: {ttl_path} not found")
         return
 
-    # Parse TTL into subject → {predicate: [objects]}
+    # ── Parse TTL ────────────────────────────────────────────────
     triples: dict = collections.defaultdict(lambda: collections.defaultdict(list))
     with open(ttl_path, encoding="utf-8") as fh:
         text = re.sub(r'#[^\n]*', '', fh.read())
@@ -537,93 +541,195 @@ def fig_provenance(
             if len(toks) >= 2:
                 for obj in re.split(r'\s*,\s*', " ".join(toks[1:])):
                     if obj.strip():
-                        triples[toks[0]][toks[1]].append(obj.strip())
+                        triples[subj][toks[0]].append(obj.strip())
 
     def _has_type(s, t):
         return any(t in x for x in triples[s].get("a", []))
 
-    def _label(s):
+    def _rdfs_label(s):
         lbls = triples[s].get("rdfs:label", [])
-        raw = lbls[0].strip('"') if lbls else s.split(":")[-1]
-        parts = raw.split("_")
-        return "_".join(parts[:3])[:28]
+        return lbls[0].strip('"') if lbls else s.split(":")[-1]
 
-    activities = [s for s in triples if _has_type(s, "prov:Activity")
-                  and not _has_type(s, "provone:Workflow")]
-    entities   = [s for s in triples if _has_type(s, "prov:Entity")]
+    def _act_label(s):
+        raw = _rdfs_label(s)
+        parts = [p for p in raw.split("_") if not re.match(r'^[0-9a-f]{6,}$', p)]
+        while parts and parts[-1] in ("telemetry", "global", "satellite", "local"):
+            parts.pop()
+        if len(parts) >= 2:
+            return parts[0] + "\n" + "_".join(parts[1:3])
+        return "_".join(parts)[:18]
 
-    KW = ("M4", "M5", "E1", "E2", "Semantic", "Provenance", "Injection", "Detection")
-    core_acts = [a for a in activities
-                 if any(k.lower() in a.lower() or k.lower() in _label(a).lower()
-                        for k in KW)] or activities
+    def _ent_label(s):
+        raw = _rdfs_label(s)
+        if len(raw) > 13:
+            mid = len(raw) // 2
+            i = raw.rfind("_", 0, mid + 5)
+            if i > 0:
+                return raw[:i] + "\n" + raw[i + 1:]
+        return raw
 
-    linked = set()
-    for act in core_acts:
-        for e in triples[act].get("prov:used", []):
-            e = e.strip(" ,;.")
-            if e in entities:
-                linked.add(e)
-    for ent in entities:
-        for ga in triples[ent].get("prov:wasGeneratedBy", []):
-            if ga.strip(" ,;.") in core_acts:
-                linked.add(ent)
+    # Identify module-level activities (filter out pipeline run wrapper)
+    KW = ("E1", "E2", "M1", "M2", "M3", "M4", "M5")
+    def _act_sort_key(a):
+        # Primary: prov:startedAtTime (ISO strings sort lexicographically)
+        times = triples[a].get("prov:startedAtTime", [])
+        t0 = times[0].strip('"').split("^^")[0] if times else "9999"
+        # Secondary: KW index (E1<E2<M1…<M5) for ties
+        kw_rank = next((i for i, k in enumerate(KW)
+                        if k in a or k in _rdfs_label(a)), 99)
+        return (t0, kw_rank)
 
-    G = nx.DiGraph()
-    for a in core_acts:
-        G.add_node(a, kind="activity", label=_label(a))
-    for e in list(linked)[:20]:
-        G.add_node(e, kind="entity", label=_label(e))
-    for act in core_acts:
-        for e in triples[act].get("prov:used", []):
-            e = e.strip(" ,;.")
-            if e in G:
-                G.add_edge(e, act, rel="used")
-    for ent in entities:
-        for ga in triples[ent].get("prov:wasGeneratedBy", []):
-            if ga.strip(" ,;.") in core_acts and ent in G:
-                G.add_edge(ga.strip(" ,;."), ent, rel="generated")
+    activities = sorted(
+        [s for s in triples
+         if _has_type(s, "prov:Activity")
+         and any(k in s or k in _rdfs_label(s) for k in KW)],
+        key=_act_sort_key,
+    )
+    entities_all = {s for s in triples if _has_type(s, "prov:Entity")}
 
-    G.remove_nodes_from([n for n in G.nodes if G.degree(n) == 0])
-
-    act_nodes = [n for n in G.nodes if G.nodes[n]["kind"] == "activity"]
-    ent_nodes = [n for n in G.nodes if G.nodes[n]["kind"] == "entity"]
-
-    if G.number_of_nodes() == 0:
-        fig, ax = plt.subplots(figsize=(7, 2.5))
-        ax.text(0.5, 0.5, "SensorWF PROV-O Runtime Provenance Trace\n"
-                "PROV-O/ProvONE Turtle: activities, entities, used/wasGeneratedBy",
-                ha="center", va="center", fontsize=10, transform=ax.transAxes,
-                bbox=dict(boxstyle="round", fc="#FFF9C4", ec="#aaaaaa"))
+    if not activities:
+        fig, ax = plt.subplots(figsize=(8, 3))
+        ax.text(0.5, 0.5,
+                "SensorWF PROV-O Provenance Trace\n"
+                "(E1 Fault Injection → E2 Detection → M4 Semantic Annotation)",
+                ha="center", va="center", fontsize=11, transform=ax.transAxes,
+                bbox=dict(boxstyle="round,pad=0.5", fc="#FFF9C4", ec="#888888", lw=1.5))
         ax.axis("off")
         _save(fig, out_path, symlink_doc=False)
         return
 
-    try:
-        pos = nx.nx_agraph.graphviz_layout(G, prog="dot")
-    except Exception:
-        pos = {}
-        for i, n in enumerate(act_nodes):
-            pos[n] = ((i + 1) * 3.5, 2.0)
-        for i, n in enumerate(ent_nodes):
-            pos[n] = ((i + 1) * 2.0, 0.0)
+    # Per-activity input/output entity lists (cap at 3 each)
+    act_inputs: dict = {}
+    act_outputs: dict = {}
+    for act in activities:
+        ins = [e.strip(" ,;.") for e in triples[act].get("prov:used", [])
+               if e.strip(" ,;.") in entities_all]
+        outs = [e for e in entities_all
+                if any(act == ga.strip(" ,;.")
+                       for ga in triples[e].get("prov:wasGeneratedBy", []))]
+        act_inputs[act] = ins[:3]
+        act_outputs[act] = outs[:3]
 
-    fig, ax = plt.subplots(figsize=(10, 4.5))
+    # ── Layout ───────────────────────────────────────────────────
+    n_acts = len(activities)
+    COL_W  = 5.5
+    X_OFF  = 1.8   # left margin (room for row labels)
+    FIG_W  = max(14.0, n_acts * COL_W + X_OFF + 1.0)
+    FIG_H  = 7.5
+    Y_TOP  = 5.9   # input entities
+    Y_MID  = 3.6   # activities
+    Y_BOT  = 1.4   # output entities
+    ACT_W, ACT_H = 2.5, 0.90
+    ENT_W, ENT_H = 2.1, 0.62
+
+    act_cx = {act: X_OFF + COL_W * i + COL_W / 2 for i, act in enumerate(activities)}
+
+    # Deduplicate entities by human-readable label (same label = same logical artifact)
+    ent_pos: dict = {}
+    seen_labels: set = set()
+    for act in activities:
+        cx = act_cx[act]
+        for ents, y0 in [(act_inputs[act], Y_TOP), (act_outputs[act], Y_BOT)]:
+            new_ents = [e for e in ents if _rdfs_label(e) not in seen_labels]
+            n_new = len(new_ents)
+            for j, e in enumerate(new_ents):
+                off = (j - (n_new - 1) / 2.0) * (ENT_W + 0.30)
+                ent_pos[e] = (cx + off, y0)
+                seen_labels.add(_rdfs_label(e))
+
+    # ── Draw helpers ─────────────────────────────────────────────
+    ACT_FC  = "#1565C0"
+    IN_FC   = "#2E7D32"
+    OUT_FC  = "#C84B00"
+    ARR_IN  = "#1B5E20"
+    ARR_OUT = "#8D3300"
+    ARR_SEQ = "#37474F"
+    ARR_DRV = "#7B1FA2"
+
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
+    ax.set_xlim(0, FIG_W)
+    ax.set_ylim(0, FIG_H)
     ax.set_axis_off()
-    ACT_COLOR, ENT_COLOR = "#1565C0", "#E65100"
-    nx.draw_networkx_nodes(G, pos, nodelist=act_nodes, node_color=ACT_COLOR,
-                           node_shape="s", node_size=800, ax=ax, alpha=0.9)
-    nx.draw_networkx_nodes(G, pos, nodelist=ent_nodes, node_color=ENT_COLOR,
-                           node_shape="o", node_size=450, ax=ax, alpha=0.9)
-    nx.draw_networkx_edges(G, pos, ax=ax, arrows=True, arrowsize=12,
-                           edge_color="#90A4AE", width=1.2,
-                           connectionstyle="arc3,rad=0.08")
-    nx.draw_networkx_labels(G, pos, labels={n: G.nodes[n]["label"] for n in act_nodes},
-                            font_size=6.5, ax=ax, font_color="white", font_weight="bold")
-    nx.draw_networkx_labels(G, pos, labels={n: G.nodes[n]["label"] for n in ent_nodes},
-                            font_size=6, ax=ax, font_color="#212121")
-    ax.legend(handles=[mpatches.Patch(color=ACT_COLOR, label="prov:Activity"),
-                        mpatches.Patch(color=ENT_COLOR, label="prov:Entity")],
-              loc="upper right", fontsize=8.5, frameon=True)
+
+    def _box(cx, cy, w, h, fc, text, fs=7.5):
+        patch = FancyBboxPatch(
+            (cx - w / 2, cy - h / 2), w, h,
+            boxstyle="round,pad=0.08",
+            fc=fc, ec="white", lw=1.4, zorder=3,
+        )
+        ax.add_patch(patch)
+        ax.text(cx, cy, text, ha="center", va="center", fontsize=fs,
+                color="white", fontweight="bold", zorder=4,
+                multialignment="center", linespacing=1.3)
+
+    def _arrow(x0, y0, x1, y1, color, rad=0.0, ls="solid"):
+        ax.annotate(
+            "", xy=(x1, y1), xytext=(x0, y0),
+            arrowprops=dict(arrowstyle="-|>", color=color, lw=1.4,
+                            linestyle=ls,
+                            connectionstyle=f"arc3,rad={rad}"),
+            zorder=2,
+        )
+
+    # Row labels — drawn last with white background so they float above boxes
+    for y, txt, col in [(Y_TOP, "Inputs",     IN_FC),
+                         (Y_MID, "Activities", ACT_FC),
+                         (Y_BOT, "Outputs",    OUT_FC)]:
+        ax.text(X_OFF - 0.15, y, txt, ha="right", va="center", fontsize=9,
+                color=col, style="italic", fontweight="bold", zorder=10,
+                bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="none",
+                          alpha=0.88))
+
+    # Activities
+    for act in activities:
+        _box(act_cx[act], Y_MID, ACT_W, ACT_H, ACT_FC, _act_label(act), fs=8.5)
+
+    # Input entities (green) + arrows up-to-activity
+    for act in activities:
+        cx = act_cx[act]
+        for e in act_inputs[act]:
+            if e in ent_pos:
+                ex, ey = ent_pos[e]
+                _box(ex, ey, ENT_W, ENT_H, IN_FC, _ent_label(e), fs=7.5)
+                _arrow(ex, ey - ENT_H / 2, cx, Y_MID + ACT_H / 2, ARR_IN)
+
+    # Output entities (orange) + arrows down-from-activity
+    for act in activities:
+        cx = act_cx[act]
+        for e in act_outputs[act]:
+            if e in ent_pos:
+                ex, ey = ent_pos[e]
+                _box(ex, ey, ENT_W, ENT_H, OUT_FC, _ent_label(e), fs=7.5)
+                _arrow(cx, Y_MID - ACT_H / 2, ex, ey + ENT_H / 2, ARR_OUT)
+
+    # Sequential pipeline arrows between activities
+    for i in range(n_acts - 1):
+        a1, a2 = activities[i], activities[i + 1]
+        _arrow(act_cx[a1] + ACT_W / 2, Y_MID,
+               act_cx[a2] - ACT_W / 2, Y_MID, ARR_SEQ)
+
+    # wasDerivedFrom derivation arrows (dashed purple) between visible entities
+    for e in entities_all:
+        for src in triples[e].get("prov:wasDerivedFrom", []):
+            src = src.strip(" ,;.")
+            if e in ent_pos and src in ent_pos:
+                ex0, ey0 = ent_pos[src]
+                ex1, ey1 = ent_pos[e]
+                _arrow(ex0 + ENT_W / 2, ey0, ex1 - ENT_W / 2, ey1,
+                       ARR_DRV, rad=0.35, ls="dashed")
+
+    # Legend
+    ax.legend(
+        handles=[
+            mpatches.Patch(color=ACT_FC, label="prov:Activity"),
+            mpatches.Patch(color=IN_FC,  label="prov:Entity (input)"),
+            mpatches.Patch(color=OUT_FC, label="prov:Entity (output)"),
+        ],
+        loc="lower right", fontsize=8.5, frameon=True,
+        framealpha=0.92, ncol=1, edgecolor="#cccccc",
+    )
+    ax.set_title("SensorWF PROV-O Runtime Provenance Trace",
+                 fontsize=10, fontweight="bold", pad=6)
 
     _save(fig, out_path, symlink_doc=False)
 

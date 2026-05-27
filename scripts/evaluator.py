@@ -682,7 +682,7 @@ def evaluate_detector(
     The decision threshold is set at `threshold_pct` of `train_scores`
     (clean training set) so that FPR on normal data ≈ (100 − threshold_pct)%.
     If `train_scores` is None, the threshold falls back to the same percentile
-    of the injected `scores` (legacy behaviour).
+    of the injected `scores` (legacy behavior).
 
     Returns a dict with keys:
         accuracy, fpr, precision, recall, f1, latency_s, auc_roc,

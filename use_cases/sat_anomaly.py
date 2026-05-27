@@ -59,9 +59,20 @@ from scripts.workflow import E1_FAULT_INJECTION, E2_DETECTION, M4_SEMANTIC
 
 _RESULTS_DIR   = os.path.join("results", "satellite")
 _ONTOLOGY_PATH = os.path.join("results", "ontologies", "satellitesystem.owl")
-_ALL_FAMILIES  = [
-    "AccelerometerTest", "GyroTest", "ReactionWheelTest", "ThermalTest",
-]
+_NON_FAMILY_DIRS = {"semantic", "aggregated"}
+
+
+def _discover_families(results_dir: str) -> list[str]:
+    """Return subdirectory names that contain cdh_clean.csv (i.e. processed families)."""
+    families = []
+    if not os.path.isdir(results_dir):
+        return families
+    for entry in sorted(os.scandir(results_dir), key=lambda e: e.name):
+        if not entry.is_dir() or entry.name in _NON_FAMILY_DIRS:
+            continue
+        if os.path.isfile(os.path.join(entry.path, "cdh_clean.csv")):
+            families.append(entry.name)
+    return families
 
 
 def _load_ml_importances(results_dir: str) -> dict[str, float]:
@@ -187,7 +198,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="SensorWF satellite anomaly detection use case (E1 + E2)")
     parser.add_argument("--families",    nargs="*", metavar="NAME",
-                        help="Experiment families (default: all 4)")
+                        help="Experiment families (default: auto-discover from results dir)")
     parser.add_argument("--results-dir", default=_RESULTS_DIR)
     parser.add_argument("--seed",        type=int, default=42)
     parser.add_argument("--n-variants",  type=int, default=2)
@@ -197,7 +208,7 @@ def main():
                         help="Ignore cached ml_evaluation.json and rerun E1+E2")
     args = parser.parse_args()
 
-    families = args.families if args.families else _ALL_FAMILIES
+    families = args.families if args.families else _discover_families(args.results_dir)
     tiers    = ["easy"] if args.fast else None
 
     run_ts   = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")

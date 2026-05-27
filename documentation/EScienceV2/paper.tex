@@ -42,7 +42,7 @@
 \maketitle
 
 \begin{abstract}
-Scientific sensor data pervades disciplines from spacecraft engineering and clinical medicine to atmospheric science---and in each case, the analytical pipeline follows the same skeleton: ingest raw archives, assess quality, engineer features, annotate semantically, and record provenance. Yet these pipelines are routinely published as monolithic, domain-specific scripts whose assumptions remain implicit and whose components resist reuse across disciplinary boundaries. We present \textbf{SensorWF}, a FAIR-annotated workflow framework for generalizable scientific time-series analysis. A five-module reusable core (M1--M5) with typed I/O contracts forms the analytical backbone; a \emph{domain adapter} pattern confines all domain-specific logic to M1 so that M2--M5 execute identically across disciplines, encoding domain assumptions in a machine-readable component registry so that any sensor domain can be integrated and reused without altering the analytical core. Domain-specific analyses attach as \emph{use-case extensions} without modifying the core. Runtime PROV-O/ProvONE provenance traces---including SHA-256 checksums for all file-path entities---and SSN/SOSA-aligned OWL ontologies are emitted as first-class outputs. To validate generalizability, we instantiate SensorWF across three scientifically distinct domains---spacecraft telemetry, ambulatory ECG, and atmospheric climate---and demonstrate synthetic fault injection and multi-detector anomaly detection as a representative use-case extension. Results confirm that a single codebase, parameterised solely through M1 adapters of approximately 150 lines each, supports complete analytical pipelines across domains with markedly different sampling rates, channel counts, and fault taxonomies. All code, component registry, ontology artefacts, and datasets are released as an open scientific object.
+Scientific sensor data pervades disciplines from spacecraft engineering and clinical medicine to atmospheric science---and in each case, the analytical pipeline follows the same skeleton: ingest raw archives, assess quality, engineer features, annotate semantically, and record provenance. Yet these pipelines are routinely published as monolithic, domain-specific scripts whose assumptions remain implicit and whose components resist reuse across disciplinary boundaries. We present \textbf{SensorWF}, a FAIR-annotated workflow framework for generalizable scientific time-series analysis. A five-module reusable core (M1--M5) with typed I/O contracts forms the analytical backbone; a \emph{domain adapter} pattern confines all domain-specific logic to M1 so that M2--M5 execute identically across disciplines, encoding domain assumptions in a machine-readable component registry so that any sensor domain can be integrated and reused without altering the analytical core. Domain-specific analyses attach as \emph{use-case extensions} without modifying the core. Runtime PROV-O/ProvONE provenance traces---including SHA-256 checksums for all file-path entities---and SSN/SOSA-aligned OWL ontologies are emitted as first-class outputs. To validate generalizability, we instantiate SensorWF across three scientifically distinct domains---spacecraft telemetry, ambulatory ECG, and atmospheric climate---and demonstrate synthetic fault injection and multi-detector anomaly detection as a representative use-case extension. Results confirm that a single codebase, parameterized solely through M1 adapters of approximately 170--500 lines each (the DomainAdapter interface is 150--200 lines; the satellite adapter additionally includes a 300-line bespoke SCOTTI telemetry parser), supports complete analytical pipelines across domains with markedly different sampling rates, channel counts, and fault taxonomies. All code, component registry, ontology artifacts, and datasets are released as an open scientific object.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -53,7 +53,7 @@ computational workflows, FAIR principles, domain adaptation, sensor analytics, a
 \section{Introduction}
 %% =========================================================
 
-Sensor-driven scientific disciplines share a computational burden that receives little formal architectural attention. Raw measurements must be ingested, corrected for artefacts, and transformed into analysis-ready feature representations---each stage encoding domain assumptions about sampling rates, quality thresholds, and channel semantics that are seldom made explicit or machine-readable. Downstream analyses then layer further domain-specific logic on top of this shared skeleton.
+Sensor-driven scientific disciplines share a computational burden that receives little formal architectural attention. Raw measurements must be ingested, corrected for artifacts, and transformed into analysis-ready feature representations---each stage encoding domain assumptions about sampling rates, quality thresholds, and channel semantics that are seldom made explicit or machine-readable. Downstream analyses then layer further domain-specific logic on top of this shared skeleton.
 
 Despite this structural commonality, pipelines across domains are almost universally developed in isolation as monolithic, domain-specific scripts. The resulting fragmentation prevents reuse, makes cross-domain comparisons unreliable, and renders post-publication audit practically impossible. The eScience and open-science communities have called for pipelines to be treated as first-class scientific objects whose provenance can be traced, shared, and reused \cite{wilkinson2016fair,garijo2022fair}.
 
@@ -76,7 +76,6 @@ Our contributions include:
 \subsection{FAIR Computational Workflows}
 
 The FAIR principles, being Findable, Accessible, Interoperable, and Reusable, were developed by Wilkinson et al. for a persistent issue in scientific publishing, in which data and software are routinely produced but are effectively lost to the community due to a lack of metadata, open licenses, and standard formats needed for reuse \cite{wilkinson2016fair}. When applied to computational workflows, the FAIR framework requires pipelines to include machine-readable metadata, typed I/O specifications, and explicit documentation of assumptions, enabling other researchers to discover, cite, and extend workflows without examining source code \cite{garijo2022fair}. Gustafsson et al. describe WorkflowHub, a registry for computational workflows that supports FAIR sharing and scholarly attribution via RO-Crate packaging and open standards including CWL and the GA4GH TRS API \cite{gustafsson2025workflowhub}. WorkflowHub is intended to enable the discovery and reuse of workflows in an accessible and interoperable manner. This goal is achieved through the adoption of open standards and tools, including CWL, RO-Crate, Bioschemas, and the GA4GH TRS API, in alignment with the FAIR principles. Our work, SensorWF, advances this ecosystem by explicitly encoding domain assumptions in a machine-readable component registry, allowing any sensor domain to be integrated and reused without altering the analytical core.
-\Alex{Make sure this is in the paper: ``\colorbox{yellow}{encoding domain assumptions} in a machine-readable component registry, allowing any sensor domain to be integrated and reused without altering the analytical core''}
 
 \subsection{Scientific Provenance}
 
@@ -90,12 +89,12 @@ Sensor-oriented vocabularies such as SSN and SOSA address this issue by providin
 
 Knowledge graphs implement these semantic models by representing entities and relationships as interconnected graph structures. In scientific time-series workflows, a knowledge graph can link engineered features to their source channels, relevant domain concepts, and supporting evidence. This structure enhances interoperability by allowing users to trace relationships among raw measurements, derived features, analytical outputs, and the scientific systems they represent. Additionally, it supports reproducibility by making workflow context explicit, rather than implicit within procedural code \cite{provo2013,missier2013provone}.
 
-In SensorWF, semantic annotation is treated as a core workflow function rather than a post-processing artifact. Engineered features are mapped to domain ontology classes, and the resulting relationships are exported as machine-readable graph artifacts. This design supports FAIR principles by improving the interoperability and reusability of workflow outputs across multiple sensor domains \cite{wilkinson2016fair,wilkinson2025workflowhub}. Rather than producing only tabular data products or model scores, SensorWF connects analytical results to explicit scientific concepts, allowing outputs from satellite telemetry and climate observation workflows to be inspected and compared through a shared semantic framework.
+In SensorWF, semantic annotation is treated as a core workflow function rather than a post-processing artifact. Engineered features are mapped to domain ontology classes, and the resulting relationships are exported as machine-readable graph artifacts. This design supports FAIR principles by improving the interoperability and reusability of workflow outputs across multiple sensor domains \cite{wilkinson2016fair,gustafsson2025workflowhub}. Rather than producing only tabular data products or model scores, SensorWF connects analytical results to explicit scientific concepts, allowing outputs from satellite telemetry and climate observation workflows to be inspected and compared through a shared semantic framework.
 \Kellan{iffy on this paragraph, rewriting later}
 
 \subsection{Domain Adapter Patterns in Scientific Computing}
 
-The separation of domain-specific components from reusable algorithmic cores is a well-established practice in scientific computing, as exemplified by the Galaxy platform \cite{afgan2018galaxy} and time-series toolkits such as TSFEL \cite{barandas2020tsfel}. SensorWF formalises this separation as an explicit architectural invariant: M1 is the only domain-varying component, while M2 through M5 operate on a standardised DataFrame schema regardless of data origin. Portability boundaries, such as the assumption in M2 of temporally regular sampling, are documented as \texttt{sensorwf:hasAssumption} predicates in the component registry. Irregular-rate streams require additional extensions.
+The separation of domain-specific components from reusable algorithmic cores is a well-established practice in scientific computing, as exemplified by the Galaxy platform \cite{afgan2018galaxy} and time-series toolkits such as TSFEL \cite{barandas2020tsfel}. SensorWF formalizes this separation as an explicit architectural invariant: M1 is the only domain-varying component, while M2 through M5 operate on a standardized DataFrame schema regardless of data origin. Portability boundaries, such as the assumption in M2 of temporally regular sampling, are documented as \texttt{sensorwf:hasAssumption} predicates in the component registry. Irregular-rate streams require additional extensions.
 \Logan{talk a bit much about our work here but otherwise this is a pretty tiny section that we would loop back to later, thoughts?}
 
 \subsection{Anomaly Detection Benchmarks and Methods}
@@ -158,7 +157,7 @@ One challenge encountered during the experiments involved determining how to ret
 \node[src, right=0.38cm of dsrc1] (dsrc2) {ECG\\\tiny MIT-BIH};
 \node[src, right=0.38cm of dsrc2] (dsrc3) {Climate\\\tiny Jena};
 
-%% M1 domain adapter (below sources, centred)
+%% M1 domain adapter (below sources, centered)
 \node[box, below=0.55cm of dsrc2, fill=teal!13] (nm1)
   {M1\\\scriptsize Domain Adapter};
 \draw[arr] (dsrc1.south) -- ++(0,-0.08) -| (nm1.north west);
@@ -201,7 +200,7 @@ One challenge encountered during the experiments involved determining how to ret
         label={[font=\tiny\itshape,text=orange!65]below:Use-Case Extensions (opt.)}] {};
 \end{scope}
 \end{tikzpicture}
-\caption{SensorWF architecture. The domain adapter (teal, M1) normalises raw sensor archives from three domains into a standardised DataFrame. The reusable core (blue, M2--M5) performs quality assessment, feature engineering, semantic annotation, and provenance export identically across all domains. Optional use-case extensions (orange, E1--E2) inject synthetic faults and evaluate ML detectors; E2 results optionally enhance M4's knowledge graph (dashed arrow). Switching domains requires only a new M1 adapter ($\approx$150\,lines of Python); M2--M5 require no modification.}
+\caption{SensorWF architecture. The domain adapter (teal, M1) normalizes raw sensor archives from three domains into a standardized DataFrame. The reusable core (blue, M2--M5) performs quality assessment, feature engineering, semantic annotation, and provenance export identically across all domains. Optional use-case extensions (orange, E1--E2) inject synthetic faults and evaluate ML detectors; E2 results optionally enhance M4's knowledge graph (dashed arrow). Switching domains requires only a new M1 adapter (150--200\,lines for the DomainAdapter interface; domain-specific parsers may add further lines); M2--M5 require no modification.}
 \label{fig:architecture}
 \end{figure*}
 
@@ -211,7 +210,7 @@ The design of SensorWF is guided by five key principles.
 
 \textbf{Core/extension separation.} The framework enforces a strict architectural boundary between a reusable core (M1--M5) and optional use-case extensions. The core is responsible for ingestion, quality assessment, feature engineering, semantic annotation, and provenance export, applied uniformly across all domains. Extensions, including fault injection (E1) and anomaly detection (E2), consume core typed outputs without modifying any core module. This separation is explicitly specified in \texttt{components.json} using an \texttt{extension} flag.
 
-\textbf{Adapter isolation.} All domain-specific logic is encapsulated within M1 using the \texttt{DomainAdapter} abstract interface. Each adapter implements four methods: \texttt{load()}, \texttt{get\_quality\_config()}, \texttt{get\_feature\_config()}, and \texttt{get\_ontology\_path()}, which together provide comprehensive configuration for all downstream core modules. To support a new domain, only a new M1 adapter class (approximately 150 lines) must be implemented. Use-case extensions may also query \texttt{get\_fault\_types()}.
+\textbf{Adapter isolation.} All domain-specific logic is encapsulated within M1 using the \texttt{DomainAdapter} abstract interface. Each adapter implements four methods: \texttt{load()}, \texttt{get\_quality\_config()}, \texttt{get\_feature\_config()}, and \texttt{get\_ontology\_path()}, which together provide comprehensive configuration for all downstream core modules. To support a new domain, only a new M1 adapter class (approximately 150--200 lines for the DomainAdapter interface) must be implemented; the satellite adapter additionally includes a 300-line bespoke SCOTTI telemetry parser. Use-case extensions may also query \texttt{get\_fault\_types()}.
 
 \textbf{Explicit I/O contracts.} Each module defines typed input and output ports that adhere to the ProvONE \texttt{provone:Program}/\texttt{provone:InPort}/\texttt{provone:OutPort} pattern \cite{missier2013provone}. These contracts are registered in \texttt{components.json} to facilitate programmatic discovery and composition.
 
@@ -339,7 +338,7 @@ On the satellite domain, the Autoencoder leads all five detectors with AUC-ROC $
 
 \subsection{Biomedical ECG (MIT-BIH Arrhythmia Database)}
 
-On the ECG domain, LOF achieves the highest AUC-ROC ($0.918 \pm 0.042$) and AUC-PR ($0.826 \pm 0.088$) across all 20 records, narrowly outperforming the Autoencoder (AUC-ROC $0.915 \pm 0.055$, AUC-PR $0.837 \pm 0.097$) and IsolationForest ($0.880$/$0.762$). The two leading detectors are effectively tied on AUC-ROC, but the Autoencoder marginally leads on AUC-PR ($0.837$ vs.\ $0.826$), reflecting its advantage on harder-tier faults where the longer injected windows raise the precision-recall operating point. Six morphologically distinct fault types produce compact, well-separated clusters in the 19-feature rolling-window space, favouring both neighbourhood-density estimation and reconstruction-based approaches. Low standard deviations for IF ($\pm 0.047$) and LOF ($\pm 0.042$) confirm stability across the 20-record rhythm-class mix. RobustRollingZScore performs poorly (AUC-ROC $0.487$, AUC-PR $0.394$), consistent with its fixed-window assumption breaking down against the varied morphologies of ECG artefact injections. Per-tier results show strong performance across all difficulty levels for AE and LOF, with AUC-ROC ranging from $0.876$ (Hard) to $0.943$ (Easy) and $0.886$ (Hard) to $0.947$ (Easy) respectively; full per-tier numeric results are given in Appendix~\ref{app:tier}.
+On the ECG domain, LOF achieves the highest AUC-ROC ($0.918 \pm 0.042$) and AUC-PR ($0.826 \pm 0.088$) across all 20 records, narrowly outperforming the Autoencoder (AUC-ROC $0.915 \pm 0.055$, AUC-PR $0.837 \pm 0.097$) and IsolationForest ($0.880$/$0.762$). The two leading detectors are effectively tied on AUC-ROC, but the Autoencoder marginally leads on AUC-PR ($0.837$ vs.\ $0.826$), reflecting its advantage on harder-tier faults where the longer injected windows raise the precision-recall operating point. Six morphologically distinct fault types produce compact, well-separated clusters in the 19-feature rolling-window space, favoring both neighborhood-density estimation and reconstruction-based approaches. Low standard deviations for IF ($\pm 0.047$) and LOF ($\pm 0.042$) confirm stability across the 20-record rhythm-class mix. RobustRollingZScore performs poorly (AUC-ROC $0.487$, AUC-PR $0.394$), consistent with its fixed-window assumption breaking down against the varied morphologies of ECG artifact injections. Per-tier results show strong performance across all difficulty levels for AE and LOF, with AUC-ROC ranging from $0.876$ (Hard) to $0.943$ (Easy) and $0.886$ (Hard) to $0.947$ (Easy) respectively; full per-tier numeric results are given in Appendix~\ref{app:tier}.
 
 \subsection{Atmospheric Climate (Jena Climate Dataset)}
 
@@ -356,7 +355,7 @@ The satellite core M4 run produces a knowledge graph with 1,104 nodes and 846 ed
 \label{fig:kgsubgraph}
 \end{figure}
 
-\subsection{Runtime Characterisation}
+\subsection{Runtime Characterization}
 
 Table~\ref{tab:runtime} gives per-module wall-clock times measured on a standard laptop (Apple M-series, single thread). E2 accounts for roughly 80--90\% of total pipeline time; a detector-fit cache---keyed on detector configuration rather than fault tag---ensures each family incurs exactly one training pass and re-evaluates all $N_{\text{faults}} \times 3 \times 2$ variants without redundant model refits. Correcting a prior defect that re-trained all five detectors once per fault tag ($6\times$ redundant Autoencoder fits per record) reduced ECG E2 time from $>\!1{,}000$\,s per record to the values shown. Core modules M1--M5 together consume less than 10\% of runtime, confirming that framework overhead is negligible relative to domain analysis costs. M3 remains under 1\,s across all domains thanks to the Cython-compiled skew/kurtosis accumulator and the batched stride-tricks FFT.
 
@@ -376,7 +375,7 @@ M3 Features      & $<$1     & $<$1  & 9 families; Cython O($n$) + batched FFT \\
 E1 Injection     & $\sim$5  & $\sim$1  & Generate 432 labelled CSVs \\
 E2 Detection     & $\sim$400 & $\sim$90 & Train 5 ML detectors; config-keyed cache \\
 M4 Semantic      & $\sim$30 & $\sim$7  & Build KG from ML evidence + OWL \\
-M5 Provenance    & $<$1     & $<$1  & Serialise PROV-O trace + SHA-256 \\
+M5 Provenance    & $<$1     & $<$1  & Serialize PROV-O trace + SHA-256 \\
 \midrule
 Total            & $\sim$440 & 100  & Single laptop, no GPU \\
 \bottomrule
@@ -392,11 +391,11 @@ Total            & $\sim$440 & 100  & Single laptop, no GPU \\
 
 \subsection{Generalizability and Adapter Effort}
 
-For the three validated domains, implementing each adapter required approximately 150--200 lines of Python; M2--M5 required no code modifications. The component registry enables programmatic composition: a consumer queries \texttt{components.json} for modules with a given \texttt{domain\_tag} and receives fully specified I/O contracts, enabling automated workflow instantiation and validation. The claim that \emph{only M1 is domain-specific} holds at the code level but warrants a practical qualification: M2--M5 behaviour depends on adapter-supplied configuration dictionaries that themselves encode domain knowledge the adapter author must provide explicitly. Portability limitations---e.g., M2 assumes temporally regular sampling; irregular-rate or event-driven streams require time-indexed rolling windows in M3 and resampling extensions in M2---are documented as \texttt{sensorwf:hasAssumption} predicates in the registry.
+For the three validated domains, implementing each adapter required approximately 170--200 lines of Python for the DomainAdapter interface (ECG: 185 lines, Climate: 167 lines, Satellite DomainAdapter class: 205 lines); the satellite adapter additionally includes a 296-line bespoke SCOTTI hex-encoded telemetry parser. M2--M5 required no code modifications. The component registry enables programmatic composition: a consumer queries \texttt{components.json} for modules with a given \texttt{domain\_tag} and receives fully specified I/O contracts, enabling automated workflow instantiation and validation. The claim that \emph{only M1 is domain-specific} holds at the code level but warrants a practical qualification: M2--M5 behavior depends on adapter-supplied configuration dictionaries that themselves encode domain knowledge the adapter author must provide explicitly. Portability limitations---e.g., M2 assumes temporally regular sampling; irregular-rate or event-driven streams require time-indexed rolling windows in M3 and resampling extensions in M2---are documented as \texttt{sensorwf:hasAssumption} predicates in the registry.
 
 \subsection{FAIR Assessment}
 
-Table~\ref{tab:fair} assesses SensorWF against the four FAIR dimensions. Reproducibility is guaranteed at the code level: running any domain entry point with \texttt{--seed 42} produces bit-identical CSVs, injection summaries, metrics, and KG artefacts. The only run-variant output is \texttt{provenance.ttl}, whose timestamps differ by design. Workflow registration on WorkflowHub with RO-Crate metadata and immutable Zenodo archives are planned for the open scientific object release.
+Table~\ref{tab:fair} assesses SensorWF against the four FAIR dimensions. Reproducibility is guaranteed at the code level: running any domain entry point with \texttt{--seed 42} produces bit-identical CSVs, injection summaries, metrics, and KG artifacts. The only run-variant output is \texttt{provenance.ttl}, whose timestamps differ by design. Workflow registration on WorkflowHub with RO-Crate metadata and immutable Zenodo archives are planned for the open scientific object release.
 
 \begin{table}[t]
 \caption{SensorWF FAIR Assessment}
@@ -409,8 +408,8 @@ Table~\ref{tab:fair} assesses SensorWF against the four FAIR dimensions. Reprodu
 \textbf{Principle} & \textbf{SensorWF Implementation} \\
 \midrule
 \textbf{Findable}      & \texttt{components.json} registry; SHA-256-checksummed provenance published with code; DOI via Zenodo (planned) \\
-\textbf{Accessible}    & Open formats: CSV, JSON, RDF/Turtle, OWL; three public benchmark datasets; self-contained per-domain HTML run report (quality tables, aggregated ML results, embedded figures, live KG visualisation) \\
-\textbf{Interoperable} & PROV-O + ProvONE; SSN/SOSA-aligned OWL; standardised DataFrame schema; typed module contracts \\
+\textbf{Accessible}    & Open formats: CSV, JSON, RDF/Turtle, OWL; three public benchmark datasets; self-contained per-domain HTML run report (quality tables, aggregated ML results, embedded figures, live KG visualization) \\
+\textbf{Interoperable} & PROV-O + ProvONE; SSN/SOSA-aligned OWL; standardized DataFrame schema; typed module contracts \\
 \textbf{Reusable}      & Domain assumptions encoded in machine-readable component registry; any sensor domain can be integrated without altering the analytical core; \texttt{DomainAdapter} interface; seeded RNG; \texttt{--rerun} cache bypass; \texttt{sensorwf:hasAssumption} predicates \\
 \bottomrule
 \end{tabular}
@@ -418,7 +417,7 @@ Table~\ref{tab:fair} assesses SensorWF against the four FAIR dimensions. Reprodu
 
 \subsection{Relation to Satellite Anomaly Benchmarks}
 
-The ESA-ADB benchmark \cite{esa_adb2024} recommends event-level ground truth, affiliation-aware scoring, and dynamic/EVT thresholding with postprocessing for operational satellite telemetry. OPS-SAT \cite{ruszczak2025opssat} emphasises segment-level precision at low operating FPR. SensorWF partially addresses these recommendations: density-based detectors (IF, LOF) use POT EVT calibration (Section~\ref{sec:protocol}), and an event-level \texttt{event\_detected} metric is emitted per variant. Full affiliation-aware scoring and dynamic postprocessing remain priority extensions. E2's threshold strategy and detector suite are registry-declared parameters, facilitating incremental alignment with ESA-ADB protocols without modifying any core module.
+The ESA-ADB benchmark \cite{esa_adb2024} recommends event-level ground truth, affiliation-aware scoring, and dynamic/EVT thresholding with postprocessing for operational satellite telemetry. OPS-SAT \cite{ruszczak2025opssat} emphasizes segment-level precision at low operating FPR. SensorWF partially addresses these recommendations: density-based detectors (IF, LOF) use POT EVT calibration (Section~\ref{sec:protocol}), and an event-level \texttt{event\_detected} metric is emitted per variant. Full affiliation-aware scoring and dynamic postprocessing remain priority extensions. E2's threshold strategy and detector suite are registry-declared parameters, facilitating incremental alignment with ESA-ADB protocols without modifying any core module.
 
 %% =========================================================
 \section{Limitations and Future Work}
@@ -461,7 +460,7 @@ The authors thank KISPE Space Systems for access to the SATLL telemetry datasets
 \section{ECG Detection Performance by Difficulty Tier}
 \label{app:tier}
 
-Table~\ref{tab:tier} disaggregates the ECG AUC-ROC and AUC-PR results (averaged across all 20 MIT-BIH records) by the three E1 difficulty tiers. AUC-PR increases monotonically from Easy to Hard for all detectors because Hard-tier injections occupy a larger fractional window, reducing effective class imbalance. AUC-ROC is highest on Easy for AE and LOF, reflecting their superior detection of the largest-amplitude faults; IF follows the same trend. RobustRollingZScore is near-random ($\approx\!0.49$) across all tiers, confirming its insensitivity to the varied ECG artefact morphologies.
+Table~\ref{tab:tier} disaggregates the ECG AUC-ROC and AUC-PR results (averaged across all 20 MIT-BIH records) by the three E1 difficulty tiers. AUC-PR increases monotonically from Easy to Hard for all detectors because Hard-tier injections occupy a larger fractional window, reducing effective class imbalance. AUC-ROC is highest on Easy for AE and LOF, reflecting their superior detection of the largest-amplitude faults; IF follows the same trend. RobustRollingZScore is near-random ($\approx\!0.49$) across all tiers, confirming its insensitivity to the varied ECG artifact morphologies.
 
 \begin{table}[h]
 \caption{ECG AUC-ROC / AUC-PR by Difficulty Tier (20 Records, 6 Fault Types)}
@@ -551,5 +550,17 @@ $w$ & \textbf{AE} & \textbf{IF} & \textbf{LOF} & \textbf{RRZS} & \textbf{ZS} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section{M5 PROV-O Runtime Provenance Trace}
+\label{app:provenance}
+
+Fig.~\ref{fig:provenance} shows the PROV-O/ProvONE runtime trace produced by M5 for the satellite anomaly detection use case, parsed directly from \texttt{anomaly\_provenance.ttl}. Three \texttt{prov:Activity} nodes---E1 (fault injection), E2 (anomaly detection), and M4 (semantic annotation)---are arranged in execution order with their input and output \texttt{prov:Entity} nodes. SHA-256 checksums are stored as \texttt{telwf:sha256} triples for all file-path entities. The trace is fully queryable via any SPARQL~1.1 endpoint.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_provenance.png}
+\caption{PROV-O runtime provenance trace for the satellite anomaly detection use case, parsed from \texttt{anomaly\_provenance.ttl}. Blue boxes: \texttt{prov:Activity} nodes (E1 fault injection, E2 anomaly detection, M4 semantic annotation). Green boxes: input \texttt{prov:Entity} nodes (raw telemetry files, parameters). Orange boxes: output \texttt{prov:Entity} nodes (injected variants, ML evaluation JSON, knowledge graph CSVs). Arrows show \texttt{prov:used} (green) and \texttt{prov:wasGeneratedBy} (orange) relations. SHA-256 checksums are stored for all file-path entities.}
+\label{fig:provenance}
+\end{figure}
 
 \end{document}

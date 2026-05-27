@@ -1,0 +1,2 @@
+anomaly_type,start_idx,end_idx,severity,affected_channels,tier
+C2_rssi_fade,259,286,low,['RSSI'],easy

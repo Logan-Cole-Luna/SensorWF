@@ -49,7 +49,7 @@ sensorwf:SensorWFWorkflow
 sensorwf:M1_DataIngestion
     a provone:Program, prov:Activity ;
     rdfs:label "Data Ingestion" ;
-    dc:description "Domain-adaptive ingestion that normalises raw sensor archives into a standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface. Supports SCOTTI v2 telemetry, MIT-BIH ECG CSV, and Jena Climate CSV." ;
+    dc:description "Domain-adaptive ingestion that normalizes raw sensor archives into a standardized time-series DataFrame (timestamp, elapsed_s, numeric channels). Each domain is handled by a pluggable DomainAdapter implementing the shared interface. Supports SCOTTI v2 telemetry, MIT-BIH ECG CSV, and Jena Climate CSV." ;
     sensorwf:implementedBy "scripts/adapters/" ;
     provone:hasInPort sensorwf:M1_DataIngestion_in_raw_files,
     provone:hasInPort sensorwf:M1_DataIngestion_in_adapter_config,
@@ -207,7 +207,7 @@ sensorwf:M4_SemanticAnnotation_in_ml_results
 sensorwf:M4_SemanticAnnotation_out_kg_turtle
     a provone:OutPort ;
     rdfs:label "Knowledge Graph (Turtle)" ;
-    dc:description "RDF/Turtle serialisation of the semantic KG." ;
+    dc:description "RDF/Turtle serialization of the semantic KG." ;
     sensorwf:dataType xsd:anyURI .
 
 sensorwf:M4_SemanticAnnotation_out_kg_nodes_csv
@@ -226,7 +226,7 @@ sensorwf:M4_SemanticAnnotation_out_kg_edges_csv
 sensorwf:M5_ProvenanceExport
     a provone:Program, prov:Activity ;
     rdfs:label "Provenance Export" ;
-    dc:description "Records one prov:Activity per M1-M4 module execution with wall-clock timestamps, input row counts, output file paths, and parameter values. Serialises the complete PROV-O/ProvONE trace to RDF/Turtle." ;
+    dc:description "Records one prov:Activity per M1-M4 module execution with wall-clock timestamps, input row counts, output file paths, and parameter values. Serializes the complete PROV-O/ProvONE trace to RDF/Turtle." ;
     sensorwf:implementedBy "scripts/provenance_recorder.py" ;
     provone:hasInPort sensorwf:M5_ProvenanceExport_in_execution_log,
     provone:hasOutPort sensorwf:M5_ProvenanceExport_out_provenance_ttl,
@@ -244,7 +244,7 @@ sensorwf:M5_ProvenanceExport_in_execution_log
 sensorwf:M5_ProvenanceExport_out_provenance_ttl
     a provone:OutPort ;
     rdfs:label "Provenance Trace (Turtle)" ;
-    dc:description "PROV-O/ProvONE serialisation of the full run." ;
+    dc:description "PROV-O/ProvONE serialization of the full run." ;
     sensorwf:dataType xsd:anyURI .
 
 # ── Data-flow channels ──────────────────────────────────────────

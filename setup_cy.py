@@ -16,7 +16,7 @@ building).
 
 Compiler flags
 --------------
-  -O3           aggressive optimisation
+  -O3           aggressive optimization
   -march=native target CPU instruction set (remove for portable binaries)
   -ffast-math   allow non-IEEE float reordering (safe for anomaly scoring)
 """

@@ -5,7 +5,7 @@ Each MIT-BIH record is a 30-minute, 2-lead ECG at 360 Hz.
 This adapter:
   1. Reads the pre-converted CSV (columns: 'sample #', 'MLII', 'V5').
   2. Optionally downsamples to target_hz (default 50 Hz) for computational efficiency.
-  3. Z-score normalises each lead relative to its own mean/std.
+  3. Z-score normalizes each lead relative to its own mean/std.
   4. Parses the annotation file for ground-truth beat labels.
   5. Returns a clean DataFrame with timestamp, elapsed_s, MLII, V5.
 
@@ -56,7 +56,7 @@ class ECGAdapter(DomainAdapter):
 
         Returns
         -------
-        DataFrame with timestamp, elapsed_s, MLII, V5 (Z-score normalised).
+        DataFrame with timestamp, elapsed_s, MLII, V5 (Z-score normalized).
         """
         df = pd.read_csv(path)
         # Standardise column names (strip quotes / spaces)

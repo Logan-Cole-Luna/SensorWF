@@ -108,7 +108,7 @@ results/
       cdh_clean.csv          # M1 output: cleaned telemetry
       adcs_clean.csv
       detection_report.json  # M2 quality report
-      *.png                  # telemetry visualisations
+      *.png                  # telemetry visualizations
       injected/              # E1+E2 outputs
         injection_summary.csv
         ml_evaluation.json
@@ -285,10 +285,10 @@ scripts/
     parser.py             SCOTTI archive parser (internal to SatelliteAdapter.load)
     cleaner.py            CDH/ADCS hex-decoding and cleaning (internal to SatelliteAdapter.load)
     detector.py           Satellite-specific supplementary quality checks (beyond generic M2)
-    plotter.py            Telemetry visualisation utility
+    plotter.py            Telemetry visualization utility
     ontology.py           Satellite OWL ontology generator (runtime, channel-grounded)
     semantic_kg.py        M4 knowledge graph with multi-detector aggregation (post-E2)
-    plot_kg.py            Knowledge graph visualisation utility
+    plot_kg.py            Knowledge graph visualization utility
   utils/                  Framework-level utilities (domain-agnostic)
     injector.py           Fault injection logic (E1)
     ablation_window.py    M3 window-size ablation study

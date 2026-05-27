@@ -4,7 +4,7 @@ workflow.py — FAIR-annotated computational module registry for SensorWF.
 Core modules (M1–M5): domain-agnostic, reusable across satellite, ECG, climate.
 Extension modules (E1–E2): use-case-specific, loaded only by use_cases/ scripts.
 
-  M1  DataIngestion      — parse raw sensor archives into standardised DataFrames
+  M1  DataIngestion      — parse raw sensor archives into standardized DataFrames
   M2  QualityAssessment  — NaN/stuck/timing/trend quality audit
   M3  FeatureEngineering — raw + diff + rolling feature matrix
   M4  SemanticAnnotation — ontology-linked knowledge graph (RDF/Turtle, GraphML)
@@ -161,8 +161,8 @@ M1_INGEST = WorkflowModule(
     module_id   = "M1_DataIngestion",
     label       = "Data Ingestion",
     description = (
-        "Domain-adaptive ingestion that normalises raw sensor archives into a "
-        "standardised time-series DataFrame (timestamp, elapsed_s, numeric channels). "
+        "Domain-adaptive ingestion that normalizes raw sensor archives into a "
+        "standardized time-series DataFrame (timestamp, elapsed_s, numeric channels). "
         "Each domain is handled by a pluggable DomainAdapter implementing the shared "
         "interface. Supports SCOTTI v2 telemetry, MIT-BIH ECG CSV, and Jena Climate CSV."
     ),

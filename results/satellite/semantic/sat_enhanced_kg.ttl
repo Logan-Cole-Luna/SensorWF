@@ -1,0 +1,5 @@
+@base <https://sensorwf.org/ontologies/satellite> .
+@prefix if:   <https://sensorwf.org/interpretability#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+
+# Ontology: results/ontologies/satellitesystem.owl
