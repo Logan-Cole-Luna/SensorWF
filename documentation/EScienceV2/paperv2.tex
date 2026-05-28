@@ -11,6 +11,7 @@
 \usepackage{url}
 \usepackage{microtype}
 \usepackage{tikz}
+\usepackage{hyperref}
 \usetikzlibrary{positioning,arrows.meta,fit,backgrounds,matrix}
 \usepackage{listings}
 \lstset{
@@ -53,7 +54,7 @@
 \maketitle
 
 \begin{abstract}
-Scientific sensor data is foundational across a wide range of disciplines, including spacecraft engineering, clinical medicine, and atmospheric science. In each context, the analytical pipeline typically involves ingesting raw archives, assessing data quality, engineering features, performing semantic annotation, and recording provenance. However, these pipelines are often implemented as monolithic, domain-specific scripts with implicit assumptions and limited reusability across fields. This work introduces SensorWF, a FAIR-annotated workflow framework designed for generalizable scientific time-series analysis. The framework features a five-module reusable core (M1–M5) with typed input/output contracts that constitute the analytical backbone. A domain adapter pattern isolates all domain-specific logic within M1, enabling modules M2–M5 to operate identically across disciplines. Domain assumptions are encoded in a machine-readable component registry, facilitating integration and reuse of any sensor domain without modifying the analytical core. Domain-specific analyses are incorporated as use-case extensions without altering the core modules. The framework generates runtime PROV-O/ProvONE provenance traces, including SHA-256 checksums for all file-path entities, and emits SSN/SOSA-aligned OWL ontologies as primary outputs. To assess generalizability, SensorWF is instantiated in three distinct scientific domains: spacecraft telemetry, ambulatory ECG, and atmospheric climate. Synthetic fault injection and multi-detector anomaly detection are demonstrated as representative use-case extensions. Results indicate that a single codebase, parameterized solely through M1 adapters of approximately 170–500 lines each, supports comprehensive analytical pipelines across domains with varying sampling rates, channel counts, and fault taxonomies. All code, component registry, ontology artifacts, and datasets are made available as an open scientific object.
+Scientific sensor data is foundational across a wide range of disciplines, including spacecraft engineering, clinical medicine, and atmospheric science. In each context, the analytical pipeline typically involves ingesting raw archives, assessing data quality, engineering features, performing semantic annotation, and recording provenance. However, these pipelines are often implemented as monolithic, domain-specific scripts with implicit assumptions and limited reusability across fields. This work introduces SensorWF, a FAIR-annotated workflow framework designed for generalizable scientific time-series analysis. The framework features a five-module reusable core (M1–M5) with typed input/output contracts that constitute the analytical backbone. A domain adapter pattern isolates all domain-specific logic within M1, enabling modules M2–M5 to operate identically across disciplines. Domain assumptions are encoded in a machine-readable component registry, facilitating integration and reuse of any sensor domain without modifying the analytical core. Domain-specific analyses are incorporated as use-case extensions without altering the core modules. The framework generates runtime PROV-O/ProvONE provenance traces, including SHA-256 checksums for all file-path entities, and emits SSN/SOSA-aligned OWL ontologies as primary outputs. To assess generalizability, SensorWF is instantiated in three distinct scientific domains: spacecraft telemetry, ambulatory ECG, and atmospheric climate. Synthetic fault injection and multi-detector anomaly detection are demonstrated as representative use-case extensions. Results indicate that a single codebase, parameterized solely through M1 adapters of approximately 170–500 lines each, supports comprehensive analytical pipelines across domains with varying sampling rates, channel counts, and fault taxonomies. All code, component registry, ontology artifacts, and datasets are made available as an open scientific object. Our codebase is publicly available at \href{}{}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -77,8 +78,6 @@ This paper presents \textbf{SensorWF} (\emph{Generalizable FAIR Sensor Analytics
 
 The primary contributions of this work are as follows:
 
-\Logan{Do we want this as an enumerated list or instead in paragraph form? I've seen other papers do either}
-
 \begin{enumerate}
   \item \textbf{A generalizable five-module workflow core} (M1--M5) featuring typed input/output contracts and explicit scientific assumptions. The \emph{domain adapter} pattern confines domain-specific logic to M1, while M2--M5 operate uniformly across disciplines through adapter-driven configuration.
 
@@ -98,7 +97,9 @@ The primary contributions of this work are as follows:
 
 The FAIR principles, being Findable, Accessible, Interoperable, and Reusable, were developed by Wilkinson et al. for a persistent issue in scientific publishing, in which data and software are routinely produced but are effectively lost to the community due to a lack of metadata, open licenses, and standard formats needed for reuse \cite{wilkinson2016fair}. When applied to computational workflows, the FAIR framework requires pipelines to present typed module specifications, explicitly document scientific assumptions, and include machine-readable metadata to enable other researchers to discover, cite, and extend them without examining the source code \cite{garijo2022fair}. As an extension to this framework, Wilkinson et al. established WorkflowHub to facilitate the dissemination of workflows by implementing FAIR principles and supporting workflow registration via RO-Crate packaging \cite{wilkinson2025workflowhub,gustafsson2025workflowhub}. WorkflowHub is intended to enable the discovery and reuse of workflows in an accessible and interoperable manner. This goal is achieved through the adoption of open standards and tools, including CWL, RO-Crate, Bioschemas, and the GA4GH TRS API, in alignment with the FAIR principles. Our work, SensorWF, advances this ecosystem by explicitly encoding domain assumptions in a machine-readable component registry, allowing any sensor domain to be integrated and reused without altering the analytical core. SensorWF extends prior work \cite{vargas-acosta_automating_2022,vargas_acosta_automated_2024,vargas-acosta_towards_2025} on assumption-aware scientific workflow composition by shifting the focus from composing none-machine learning scientific models to constructing reusable ML-enabled workflows.
 
-\Alex{Note to Self: Make sure this is in the paper: "encoding domain assumptions in a machine-readable component registry, allowing any sensor domain to be integrated and reused without altering the analytical core"}
+
+%% Included above
+% \Alex{Note to Self: Make sure this is in the paper: "encoding domain assumptions in a machine-readable component registry, allowing any sensor domain to be integrated and reused without altering the analytical core"}
 \subsection{Scientific Provenance}
 
 In scientific research, provenance refers to the comprehensive documentation of how a result is generated. This record encompasses the input data, applied transformations, software versions, and the timing of each procedural step. In the absence of such documentation, published results cannot be independently verified, and subsequent analyses lack the means to assess the reliability of their inputs. The W3C PROV Ontology (PROV-O) serves as the international standard for representing provenance in a machine-readable format \cite{provo2013}. It models computations as graphs that connect data artifacts, processing activities, and responsible agents through standardized relationships. These graphs are programmatically queryable, ensuring that execution histories remain accessible for inspection even after the original researcher is no longer involved. ProvONE \cite{missier2013provone} extends PROV-O for scientific workflow systems by introducing constructs for pipeline programs, their input and output ports, and individual executions, which aligns well with modular frameworks. In practice, PROV-O has been implemented in different domains, for example, to enhance audit trails in epidemiological pipelines \cite{mitchell2022fair} and integration into Earth Observation processing platforms \cite{omidi2025openeo}, among others.
@@ -111,13 +112,24 @@ Sensor-oriented vocabularies such as SSN and SOSA address this issue by providin
 
 Knowledge graphs implement these semantic models by representing entities and relationships as interconnected graph structures. In scientific time-series workflows, a knowledge graph can link engineered features to their source channels, relevant domain concepts, and supporting evidence. This structure enhances interoperability by allowing users to trace relationships among raw measurements, derived features, analytical outputs, and the scientific systems they represent. Additionally, it supports reproducibility by making workflow context explicit, rather than implicit within procedural code \cite{provo2013,missier2013provone}.
 
-In SensorWF, semantic annotation is treated as a core workflow function rather than a post-processing artifact.\Alex{Note to self: check we have a semantic annotation example in methodology or implementation section} Engineered features are mapped to domain ontology classes, and the resulting relationships are exported as machine-readable graph artifacts. This design supports FAIR principles by improving the interoperability and reusability of workflow outputs across multiple sensor domains \cite{wilkinson2016fair,wilkinson2025workflowhub}. Rather than producing only tabular data products or model scores, SensorWF connects analytical results to explicit scientific concepts, allowing outputs from satellite telemetry and climate observation workflows to be inspected and compared through a shared semantic framework.
+%%  Section 3.2 (M4 description) and Appendix B (SPARQL queries) together cover semantic annotation with concrete examples.
+
+% \Alex{Note to self: check we have a semantic annotation example in methodology or implementation section}
+
+In SensorWF, semantic annotation is treated as a core workflow function rather than a post-processing artifact. Engineered features are mapped to domain ontology classes, and the resulting relationships are exported as machine-readable graph artifacts. This design supports FAIR principles by improving the interoperability and reusability of workflow outputs across multiple sensor domains \cite{wilkinson2016fair,wilkinson2025workflowhub}. Rather than producing only tabular data products or model scores, SensorWF connects analytical results to explicit scientific concepts, allowing outputs from satellite telemetry and climate observation workflows to be inspected and compared through a shared semantic framework.
 
 \subsection{Domain Adapter Patterns in Scientific Computing}
 
-The separation of domain-specific components from reusable algorithmic cores is a well-established practice in scientific computing, as exemplified by the Galaxy platform \cite{afgan2018galaxy} and time-series toolkits such as TSFEL \cite{barandas2020tsfel}. SensorWF formalizes this separation as an explicit architectural invariant: M1 is the only domain-varying component, while M2 through M5 operate on a standardized DataFrame schema regardless of data origin. Portability boundaries, such as the assumption in M2 of temporally regular sampling, are documented as \texttt{sensorwf:hasAssumption} predicates in the component registry. Irregular-rate streams require additional extensions.
-\Logan{talk a bit much about our work here but otherwise this is a pretty tiny section that we would loop back to later, thoughts?}
-\Alex{Save the implementation for "Methodology", instead, fill this subsection with related work. Elaborate how the Galaxy platform and TSFEL are separating domain-specific vs reusable components. pros vs cons}
+The separation of domain-specific components from reusable algorithmic cores is a foundational principle in scientific computing. The Galaxy platform \cite{afgan2018galaxy} implements this principle using standalone Tool XML wrappers. Each domain tool specifies its inputs, outputs, and execution commands, while the scheduler, data management layer, and workflow engine remain unchanged. This design confines the integration effort for new bioinformatics tools to a single wrapper definition. However, a key limitation of Galaxy's model is the lack of runtime enforcement of typed contracts between tools, and the recording of provenance only at the workflow level rather than as first-class semantic artifacts.
+
+Time-series toolkits such as TSFEL \cite{barandas2020tsfel} employ a complementary, configuration-driven approach. Feature extraction functions are fully decoupled from the signal source, and a JSON configuration specifies which feature families are computed and at what window size. This design separates the specification of computation from its implementation. However, TSFEL lacks abstractions for data ingestion, quality assessment pipelines, and semantic or provenance outputs, functioning as a feature library rather than a comprehensive workflow architecture.
+
+SensorWF integrates these two architectural patterns while addressing their respective limitations. The \texttt{DomainAdapter} abstract interface formalizes domain isolation, as seen in Galaxy, by establishing explicit architectural invariants with machine-readable typed input and output contracts. M3's configuration-driven feature families extend TSFEL's approach into a comprehensive pipeline that incorporates spectral features, semantic knowledge graph annotation, and PROV-O provenance export. Portability boundaries, such as M2's assumption of temporally regular sampling, are documented as SPARQL-queryable \texttt{sensorwf:hasAssumption} predicates instead of remaining implicit within the source code.
+
+
+
+% \Logan{talk a bit much about our work here but otherwise this is a pretty tiny section that we would loop back to later, thoughts?}
+% \Alex{Save the implementation for "Methodology", instead, fill this subsection with related work. Elaborate how the Galaxy platform and TSFEL are separating domain-specific vs reusable components. pros vs cons}
 
 \subsection{Anomaly Detection Benchmarks and Methods}
 
@@ -134,7 +146,7 @@ In the biomedical field, the MIT-BIH Arrhythmia Database \cite{moody2001mitbih} 
 
 \subsubsection{Climate Observation}
 
-For atmospheric data, the Jena Climate Dataset \cite{jena_climate} is frequently analyzed using autoregressive and isolation-based methods \cite{martinez2020climate}. Wu and Keogh \cite{wu2022benchmarks} show that single-axis difficulty scaling can yield misleading detector rankings, which motivates E1's simultaneous scaling of amplitude, duration, and channel spread. \Logan{Expand}
+The Jena Climate Dataset \cite{jena_climate} is a widely used multivariate meteorological benchmark, with data recorded at 10-minute intervals from 2009 to 2016. Climate anomaly detection in this context presents challenges distinct from those associated with higher-frequency signals. Specifically, low sampling rates result in contextual anomalies, defined as deviations from expected seasonal patterns rather than absolute value thresholds, being more prevalent than point anomalies. Autoregressive methods have been employed to identify instrumental drift and calibration failures; however, these methods require stationarity assumptions that often fail during seasonal transitions \cite{martinez2020climate}. In contrast, unsupervised reconstruction-based and isolation-based approaches that operate on rolling windows are better suited to the non-stationary, multi-variable characteristics of meteorological data. Wu and Keogh \cite{wu2022benchmarks} show that single-axis difficulty scaling can produce misleading detector rankings, which motivates E1's simultaneous and independent scaling of amplitude, duration, and channel spread across all three domains.
 
 \subsection{KISPE SATLL}
 
@@ -170,11 +182,11 @@ One challenge encountered during the experiments involved determining how to ret
 \centering
 \begin{tikzpicture}[
   box/.style={draw, rounded corners=3pt, minimum width=1.65cm, minimum height=0.63cm,
-              text centered, font=\small\bfseries, fill=white, inner sep=3pt},
+              align=center, font=\small\bfseries, fill=white, inner sep=3pt},
   src/.style={draw, rounded corners=2pt, minimum width=1.25cm, minimum height=0.46cm,
-              text centered, font=\scriptsize, fill=gray!9, inner sep=2pt},
+              align=center, font=\scriptsize, fill=gray!9, inner sep=2pt},
   ext/.style={draw, rounded corners=3pt, minimum width=1.65cm, minimum height=0.63cm,
-              text centered, font=\small\bfseries, fill=orange!9, inner sep=3pt},
+              align=center, font=\small\bfseries, fill=orange!9, inner sep=3pt},
   arr/.style={-{Latex[length=2.5mm]}, thick},
   darr/.style={-{Latex[length=2mm]}, thick, dashed, gray!55},
   node distance=0.5cm and 0.78cm
@@ -235,12 +247,12 @@ One challenge encountered during the experiments involved determining how to ret
 
 The SensorWF framework is based upon five core design principles.
 
-\Alex{To Logan: Have some json examples}
+% \Alex{To Logan: Have some json examples}
 \textbf{Core/extension separation.} The framework differentiates a reusable core (M1 to M5) from optional use-case extensions. The core uniformly manages ingestion, quality assessment, feature extraction, semantic annotation, and provenance across all domains. Extensions, such as fault injection (E1) and anomaly detection (E2), interface with core typed outputs without modifying any core module. This separation is explicitly specified in \texttt{components.json} using an \texttt{extension} flag.
 
-\textbf{Adapter isolation.} All domain-specific logic is encapsulated within M1 via the \texttt{DomainAdapter} abstract interface. Each adapter implements four methods: \texttt{load()}, \texttt{get\_quality\_config()}, \texttt{get\_feature\_config()}, and \texttt{get\_ontology\_path()}, thereby providing comprehensive configuration for all core modules. Integrating a new domain requires only the implementation of a new M1 adapter class, typically comprising approximately 150 lines of code \Alex{To Logan: How many of these needs to be modified?}. Use-case extensions may additionally invoke \texttt{get\_fault\_types()} as required.
+\textbf{Adapter isolation.} All domain-specific logic is encapsulated within M1 via the \texttt{DomainAdapter} abstract interface. Each adapter implements four methods: \texttt{load()}, \texttt{get\_quality\_config()}, \texttt{get\_feature\_config()}, and \texttt{get\_ontology\_path()}, thereby providing comprehensive configuration for all core modules. Integrating a new domain requires implementing only these four abstract methods in a new M1 adapter class (approximately 150--200 lines for the \texttt{DomainAdapter} interface); M2 through M5 require no modification. Use-case extensions may additionally invoke \texttt{get\_fault\_types()} as required.
 
-\textbf{Explicit I/O contracts.} Each module defines typed input and output ports that adhere to the ProvONE \texttt{provone:Program}/\texttt{provone:InPort}/\texttt{provone:OutPort} pattern \cite{missier2013provone}. These contracts are documented in \texttt{components.json} to facilitate programmatic discovery and composition.
+\textbf{Explicit I/O contracts.} Each module defines typed input and output ports that adhere to the ProvONE \texttt{provone:Program}/\texttt{provone:InPort}/\texttt{provone:OutPort} pattern \cite{missier2013provone}. These contracts are documented in \texttt{components.json} to facilitate programmatic discovery and composition. A representative excerpt for M3 is provided in Appendix \ref{app:tier}.
 
 \textbf{Scientific assumption transparency.} Domain-specific assumptions, including sampling rates, quality thresholds, and window sizes, are recorded as \texttt{sensorwf:hasAssumption} predicates in both the static workflow specification and the runtime provenance trace. This method ensures that assumptions are directly SPARQL-queryable.
 
@@ -258,12 +270,17 @@ The SensorWF framework is based upon five core design principles.
 
 \textbf{M5: Provenance Export.} The \texttt{ProvenanceRecorder} accumulates one \texttt{prov:Activity} per module call, capturing wall-clock timestamps, input row counts, output file paths, and parameter values. SHA-256 checksums are automatically computed for all file-path entities and stored as \texttt{telwf:sha256} triples, enabling bit-level reproducibility verification. The serialized PROV-O/ProvONE Turtle document is produced as a primary workflow output, regardless of whether use-case extensions are executed.
 
-\textbf{E1: Fault Injection (use-case only).} The procedure reads \texttt{get\_fault\_types()} and applies each morphology across three difficulty tiers, scaling amplitude, duration, and channel spread simultaneously. This multi-axis approach mitigates confounds associated with single-axis separability \cite{wu2022benchmarks}. With two variants per (type, tier) pair, E1 generates $N_{\text{faults}} \times 3 \times 2$ labeled sessions per domain (Table~\ref{tab:m4params}).\Alex{Anyone: ref broken}
+\textbf{E1: Fault Injection (use-case only).} The procedure reads \texttt{get\_fault\_types()} and applies each morphology across three difficulty tiers, scaling amplitude, duration, and channel spread simultaneously. This multi-axis approach mitigates confounds associated with single-axis separability \cite{wu2022benchmarks}. With two variants per (type, tier) pair, E1 generates $N_{\text{faults}} \times 3 \times 2$ labeled sessions per domain.
 
 \textbf{E2: Anomaly Detection (use-case only).} Five machine learning detectors are trained on the first 60\% of the clean session, which is temporally prior to any injected segment: (i) Z-Score with MAD-robust fusion (Iglewicz-Hoaglin threshold \cite{iglewicz1993outliers}); (ii) RobustRollingZScore with CUSUM persistence \cite{page1954cusum}; (iii) IsolationForest with a three-member contiguous-feature rotation ensemble \cite{liu2008isolation}; (iv) a multi-scale MLP Autoencoder with Gaussian denoising ($\sigma\!=\!0.06$), dual sequence windows (lengths 8 and 16), and two hidden layers (64 and 32 units, tanh activations) \cite{sakurada2014autoencoder}; and (v) Local Outlier Factor (LOF) with novelty detection and PCA pre-processing (95\% variance retained) \cite{breunig2000lof}. Ensemble and density-based detectors (IF, LOF, PCA) use scikit-learn \cite{pedregosa2011sklearn}. For density-based detectors (IF and LOF), a Peaks-over-Threshold (POT) extreme-value theory calibration \cite{siffer2017evt} fits a Generalized Pareto Distribution to the tails of the training-set scores, whereas statistical detectors use the 99th percentile threshold. Per-fault and aggregate metrics, including AUC-ROC, AUC-PR, F1, FPR, recall, and the binary \texttt{event\_detected} metric, are reported by tier.
 
 \subsection{Domain Applications}
-\Alex{To Logan: These three subsections are also described in background, is this a duplicate? maybe we can describe some preprocessing or some specific module that was built to test these datasets}
+
+Section~\ref{sec:background} provided an overview of each domain at the levels of physical experimentation and dataset description. The following subsections examine the specifics of the M1 adapter, present fault taxonomies, and detail module-level parameter selections that enable the operationalization of each domain within SensorWF.
+
+%% Addressed with above statement
+
+% \Alex{To Logan: These three subsections are also described in background, is this a duplicate? maybe we can describe some preprocessing or some specific module that was built to test these datasets}
 \subsubsection{Satellite Telemetry (KISPE SATLL)}
 
 The KISPE Satellite Learning Laboratory (SATLL) provides authentic telemetry (real-time measurement data transmitted from remote sensors) from four experiment families: AccelerometerTest, GyroTest, ReactionWheelTest, and ThermalTest \cite{kispe_satll}. Each session generates CDH (Command and Data Handling) data, encompassing 87 columns including measurements of thermal, power, and timing, as well as ADCS (Attitude Determination and Control System) data, covering 30 columns that include sensors for inertia measurement units (IMUs), reaction wheels, and sun sensors, at approximately 1 Hz (one measurement per second). E1 introduces 18 fault types: 16 single-channel faults (in which only one measurement channel is affected) and 2 compound faults involving multiple channels. CDH faults encompass issues such as power-rail drift (gradual voltage changes), thermal ramp (continuous temperature change), and packet dropout (missing data segments), while ADCS faults include gyro clipping (sensor saturation), magnetometer inversion (incorrect field polarity), and wheel runaway or stiction (uncontrolled or stuck motion). For each experiment family, there are 108 labeled sessions ($18 \times 3 \times 2 = 108$).
@@ -286,10 +303,10 @@ The Jena Climate Dataset \cite{jena_climate} records 14 meteorological variables
 \subsection{Training and Evaluation Protocol}
 \label{sec:protocol}
 
-\textbf{TODO}
+E2 applies a strict temporal train/test split to prevent data leakage. The initial 60\% of each clean baseline session is designated as training data. E1 evaluates only the remaining 40\% suffix; injected windows always commence at or after sample $\lfloor 0.6 \cdot N \rfloor$, which ensures no temporal overlap between the training prefix and any evaluated anomalous segment. Rolling-window features, with a maximum of 100 samples at 50 Hz, are negligible compared to the $\geq\!6{,}000$-sample clean gap, thereby preventing roll-back leakage. Evaluation metrics include sample-wise AUC-ROC, AUC-PR, F1, FPR, recall, and \texttt{event\_detected} (a binary indicator of whether the injected anomaly window was intercepted by at least one true positive). AUC-PR serves as the primary imbalance-aware metric, given the anomaly prevalence of $\approx\!20$--$40\%$ per injected session.
 
 \begin{table}[t]
-\caption{Cross-Domain Detection Performance (All Tiers, Session-Averaged)}
+\caption{Cross-Domain Detection Performance}
 \label{tab:crossdomain}
 \centering
 \scriptsize
@@ -300,9 +317,9 @@ The Jena Climate Dataset \cite{jena_climate} records 14 meteorological variables
 \cmidrule(lr){4-8}
 \textbf{Domain} & \textbf{Sess.} & \textbf{Faults} & \textbf{AE} & \textbf{IF} & \textbf{LOF} & \textbf{RRZS} & \textbf{ZS} \\
 \midrule
-Satellite (SATLL) & 4  & 18 & \textbf{0.704}/\textbf{0.498} & 0.586/0.353 & 0.602/0.361 & 0.539/0.287 & 0.595/0.338 \\
-ECG (MIT-BIH)     & 20 &  6 & 0.832/0.729 & 0.805/0.662 & \textbf{0.884}/\textbf{0.788} & 0.470/0.386 & 0.793/0.618 \\
-Climate (Jena)    &  7 &  6 & \textbf{0.801}/\textbf{0.658} & 0.692/0.550 & 0.723/0.577 & 0.522/0.393 & 0.712/0.565 \\
+Satellite & 4  & 18 & \textbf{0.704}/\textbf{0.498} & 0.586/0.353 & 0.602/0.361 & 0.539/0.287 & 0.595/0.338 \\
+ECG     & 20 &  6 & 0.832/0.729 & 0.805/0.662 & \textbf{0.884}/\textbf{0.788} & 0.470/0.386 & 0.793/0.618 \\
+Climate    &  7 &  6 & \textbf{0.801}/\textbf{0.658} & 0.692/0.550 & 0.723/0.577 & 0.522/0.393 & 0.712/0.565 \\
 \bottomrule
 \multicolumn{8}{l}{\scriptsize AE=Autoencoder, IF=IsolationForest, LOF=Local Outlier Factor,} \\
 \multicolumn{8}{l}{\scriptsize RRZS=RobustRollingZScore, ZS=ZScore. Bold: best per domain.} \\
