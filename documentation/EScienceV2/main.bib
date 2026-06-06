@@ -48,7 +48,7 @@
   url          = {https://www.w3.org/TR/prov-o/},
   annote       = {W3C Recommendation defining PROV-O, the standard OWL ontology for
                   representing provenance as graphs of Activities, Entities, and Agents.
-                  SensorWF's M5 module serializes one prov:Activity per pipeline stage
+                  SensorWF's M5 module serialises one prov:Activity per pipeline stage
                   in conformance with this specification.}
 }
 
@@ -101,7 +101,7 @@
   pages     = {100603},
   year      = {2022},
   doi       = {10.1016/j.patter.2022.100603},
-  annote    = {Analyzes how the four FAIR dimensions apply specifically to computational
+  annote    = {Analyses how the four FAIR dimensions apply specifically to computational
                workflows, covering machine-readable metadata, typed I/O documentation,
                and reproducibility requirements. Provides the conceptual basis for
                SensorWF's component registry and assumption-transparency design.}
@@ -399,7 +399,7 @@
   howpublished = {arXiv preprint},
   year         = {2025},
   note         = {arXiv:2505.05020},
-  annote       = {Presents a robust VAE with spatio-temporal modeling for streaming
+  annote       = {Presents a robust VAE with spatio-temporal modelling for streaming
                   multivariate anomaly detection, incorporating robustness against
                   corrupted training data. Relevant background on generative model
                   approaches to time-series anomaly detection.}
@@ -458,7 +458,7 @@
                extraction covering statistical, spectral, and temporal feature families.
                Cited as a precedent for modular, domain-agnostic feature engineering
                toolkits; SensorWF's M3 implements a similar philosophy with nine
-               feature families and Cython-optimized rolling computations.}
+               feature families and Cython-optimised rolling computations.}
 }
 
 @article{haller2019ssn,
@@ -510,6 +510,17 @@
                maps to detect anomalies in multivariate time series (ICLR 2022
                Spotlight). Cited as a transformer-based anomaly detection baseline
                that SensorWF's E2 registry can accommodate in future work.}
+}
+
+@article{wilkinson2025workflowhub,
+  author    = {Wilkinson, Sean R. and Goble, Carole and Soiland-Reyes, Stian
+               and others},
+  title     = {{WorkflowHub}: A Registry for Computational Workflows},
+  journal   = {Scientific Data},
+  volume    = {12},
+  pages     = {378},
+  year      = {2025},
+  doi       = {10.1038/s41597-025-04466-2}
 }
 
 @inproceedings{breunig2000lof,
@@ -585,4 +596,46 @@
   annote    = {Describes scikit-learn, the open-source Python machine learning
                library providing implementations of IsolationForest, Local Outlier
                Factor, and PCA used in SensorWF's E2 detector suite.}
+}
+
+@misc{itransformer2024,
+  author       = {Liu, Yong and Hu, Tengge and Zhang, Haojun and Wu, Ailing and
+                  Wang, Jianmin and Long, Mingsheng},
+  title        = {{iTransformer}: Inverted Transformers Are Effective for Time
+                  Series Forecasting},
+  howpublished = {arXiv preprint},
+  year         = {2024},
+  note         = {arXiv:2310.06625}
+}
+
+@inproceedings{vargas-acosta_automating_2022,
+  address = {Salt Lake City, Utah},
+  title = {Automating {Multivariable} {Workflow} {Composition} for {Model}-to-{Model} {Integration}},
+  doi = {10.1109/eScience55777.2022.00030},
+  booktitle = {Proceedings of the 2022 {IEEE} 18th {International} {Conference} on e-{Science} (e-{Science})},
+  author = {Vargas-Acosta, Raul Alejandro and Garnica Chavira, Luis and Villanueva-Rosales, Natalia and Pennington, Deana D.},
+  year = {2022}
+}
+
+@phdthesis{vargas_acosta_automated_2024,
+  address = {El Paso, Texas},
+  type = {Doctoral {Dissertation}},
+  title = {Automated {Composition} of {Multivariable} {Scientific} {Workflows} {Considering} {Scientific} {Assumptions}},
+  url = {https://scholarworks.utep.edu/open_etd/4162/},
+  language = {English},
+  urldate = {2024-12-29},
+  school = {The University of Texas at El Paso},
+  author = {Vargas Acosta, Raul Alejandro},
+  year = {2024}
+}
+
+@inproceedings{vargas-acosta_towards_2025,
+  address = {California, United States of America},
+  title = {Towards {Improving} {Automatic} {Composition} of {Scientific} {Workflows}: {Variable} {Reconciliation} and {Tie}-{Breaking} {Strategy}},
+  doi = {10.1109/ICSC64641.2025.00027},
+  booktitle = {2025 {IEEE} 19th {International} {Conference} on {Semantic} {Computing} ({ICSC})},
+  publisher = {Institute of Electrical and Electronics Engineers},
+  author = {Vargas-Acosta, Raul Alejandro and Garnica Chavira, Luis A. and Villanueva-Rosales, Natalia and Pennington, Deana D.},
+  month = feb,
+  year = {2025}
 }
