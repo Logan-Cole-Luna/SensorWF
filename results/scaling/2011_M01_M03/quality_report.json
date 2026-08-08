@@ -1,0 +1,52 @@
+{
+  "nan_rates": {
+    "p_mbar": 0.0,
+    "T_degC": 0.0,
+    "Tpot_K": 0.0,
+    "Tdew_degC": 0.0,
+    "rh_pct": 0.0,
+    "VPmax_mbar": 0.0,
+    "VPact_mbar": 0.0,
+    "VPdef_mbar": 0.0,
+    "sh_gkg": 0.0,
+    "H2OC_mmolmol": 0.0,
+    "rho_gm3": 0.0,
+    "wv_ms": 0.0,
+    "max_wv_ms": 0.0,
+    "wd_deg": 0.0
+  },
+  "stuck_channels": [],
+  "timing": {
+    "mean_dt_s": 600.0,
+    "std_dt_s": 0.0,
+    "max_gap_s": 600.0,
+    "expected_dt_s": 600.0,
+    "n_large_gaps": 0
+  },
+  "zscore_flags": {
+    "rh_pct": 27,
+    "VPmax_mbar": 40,
+    "VPdef_mbar": 183,
+    "wv_ms": 92,
+    "max_wv_ms": 84
+  },
+  "trends": {
+    "T_degC": {
+      "slope_per_min": 4e-05,
+      "r_squared": 0.072094,
+      "delta": 14.36
+    },
+    "p_mbar": {
+      "slope_per_min": 4e-05,
+      "r_squared": 0.032097,
+      "delta": -3.8
+    }
+  },
+  "summary": {
+    "n_rows": 12960,
+    "n_channels": 14,
+    "n_good_channels": 14,
+    "n_stuck": 0,
+    "n_zscore_flagged": 5
+  }
+}
